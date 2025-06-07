@@ -10,506 +10,337 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     //変数一覧
     int _shogiPositionX; // x現在地
     int _shogiPositionY;　// y現在地
-    Vector2 _minMax = new Vector2(0.5f, 0.5f); // マウス選択の座標の下限値
-    Vector2 _maxsize = new Vector2(9.5f, 9.5f); // マウス選択の座標の上限値
-    bool _selectPosition; // 駒の選択状態
+    public bool isSelect; // 駒の選択状態
     bool _promote; // 成駒
+
+    Vector2 _minMax = new (0.5f, 0.5f); // マウス選択の座標の下限値
+    Vector2 _maxsize = new (9.5f, 9.5f); // マウス選択の座標の上限値
+
     public int senteGote; // 先手と後手の時の動きを変える変数
     bool _isHeldPiece; // 持ち駒として選択されているか
-    int huPosition; // 二歩防止ように座標を取得
+    int _huPosition; // 二歩防止ように座標を取得
+
+	public Sprite defaultSprite; //デフォルトの見た目
+    public Sprite promotedSprite; //成駒の見た目
     
     SpriteRenderer _renderer;
     
-    [SerializeField] List<Vector2> canMovePosition = new List<Vector2>(); //駒の移動範囲(list)
+    [SerializeField] List<Vector2> canMovePosition = new (); //駒の移動範囲(list)
     
-    ShogiManager _scriptA; //ShogiManagerのスクリプト情報を入手
-
-    [SerializeField] private PieceId pieceType;
-
-    public Sprite defaultSprite; //デフォルトスプライト
-    public Sprite promotedSprite; //成駒スプライト
+    //他スクリプトの情報を取得
+    ShogiManager _shogiManager;
+    HeldPiece _heldPiece;
     
-    //[SerializeField] ShogiManager gm;
-    //[SerializeField] Piece gMscript;
-    
-    public enum PieceId //各駒の動作と条件を管理
+    public enum PieceId
     {
-        Hu,
-        Kyosha,
-        Keima,
-        Gin,
-        Kin,
-        Kaku,
-        Hisha,
-        Gyoku,
+        Hu, Kyosha, Keima, Gin, Kin, Kaku, Hisha, Gyoku,
     }
+    [SerializeField] PieceId pieceType;
     
-    // Start is called before the first frame update
-    void Start()
-    {
-        _scriptA = FindObjectOfType<ShogiManager>();
-        
-        _shogiPositionX = (int)transform.position.x;
-        _shogiPositionY = (int)transform.position.y;
-        
-        _renderer = GetComponent<SpriteRenderer>(); // SpriteRendererを取得し代入する
-        _renderer.sprite = defaultSprite;
-    }
-
-    public void StatePiece() //駒の向きの関数
+    //-------駒のタイプ設定-------
+    public void ApplyStatePiece(PieceId type)
     {
         if (gameObject.CompareTag("Sente"))
         {
             gameObject.transform.eulerAngles = new Vector3(0f, 0f, 0f);
+            senteGote = 1;
         }
         else if(gameObject.CompareTag("Gote"))
         {
             gameObject.transform.eulerAngles = new Vector3(0f, 0f, 180f);
+            senteGote = -1;
         }
-    }
-    
-    public void SetPieceType(PieceId type) //ShogiManagerからpieceTypeを取得
-    {
         pieceType = type;
     }
     
-    void CanMovePosition(Vector2 position) //移動範囲のリストを管理
+    void Start()
     {
-        // 歩の動ける範囲をリスト化
-        if (pieceType == PieceId.Hu)
-        {
-            canMovePosition.Clear();
-            canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
+        _shogiManager = ShogiManager.Instance;
+        _heldPiece = HeldPiece.Instance;
 
-            if (_promote) // 成金時の動きを追加
+        _shogiPositionX = (int)transform.position.x;
+        _shogiPositionY = (int)transform.position.y;
+        
+        _renderer = GetComponent<SpriteRenderer>();
+        _renderer.sprite = defaultSprite;
+    }
+    
+    //-----駒のクリックを検知-----
+    public void OnPieceClick(PointerEventData eventData)
+    {
+        
+        if (ShogiManager.CurrentSelectedPiece != null)
+        {
+            // 同じ駒をクリックした場合は選択解除
+            if (ShogiManager.CurrentSelectedPiece == this)
             {
-                _passedPawn(position);
+                isSelect = false;
+                ShogiManager.CurrentSelectedPiece = null;
+                Debug.Log("駒の選択を解除しました");
+                return;
             }
-
-        }
-        //桂馬の動ける範囲
-        if (pieceType == PieceId.Keima)
-        {
-            canMovePosition.Clear();
-            canMovePosition.Add(new Vector2(position.x + 1, position.y + 2 * senteGote));
-            canMovePosition.Add(new Vector2(position.x - 1, position.y + 2 * senteGote));
-
-            if (_promote) // 成金時の動きを追加
+        
+            // 選択中の駒がある場合は移動処理を実行
+            if (ShogiManager.CurrentSelectedPiece.isSelect)
             {
-                _passedPawn(position);
-            }
-
-        }
-
-        if (pieceType == PieceId.Gin) //銀
-        {
-            canMovePosition.Clear();
-            canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
-            canMovePosition.Add(new Vector2(position.x - 1, position.y + 1 * senteGote));
-            canMovePosition.Add(new Vector2(position.x + 1, position.y + 1 * senteGote));
-            canMovePosition.Add(new Vector2(position.x - 1, position.y - 1 * senteGote));
-            canMovePosition.Add(new Vector2(position.x + 1, position.y - 1 * senteGote));
-            
-            if (_promote) // 成金時の動きを追加
-            {
-                _passedPawn(position);
-            }
-        }
-        if (pieceType == PieceId.Kin) //金
-        {
-            _passedPawn(position);
-        }
-
-        if (pieceType == PieceId.Gyoku) //玉将
-        {
-            _passedPawn(position);
-            canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
-        }
-
-        if (pieceType == PieceId.Kyosha) //香車
-        {
-            canMovePosition.Clear();
-            Vector2 canUpPosition = Vector2.up;
-            
-            for (int i = 1; i < 9; i++)
-            {
-                Vector2 CheckPosition = position + canUpPosition * i * senteGote;
-                
-                if (CheckPosition.x < 1 || CheckPosition.x > 9 || CheckPosition.y < 1 || CheckPosition.y > 9) break;
-                
-                Collider2D collider = Physics2D.OverlapPoint(CheckPosition);
-                if (collider != null)
-                {
-                    Piece otherPiece = collider.GetComponent<Piece>();
-                    if (otherPiece != null)
-                    {
-                        if (otherPiece.gameObject.tag != gameObject.tag)
-                        {
-                            canMovePosition.Add(CheckPosition);
-                        }
-                        break;
-                    }
-                }
-                canMovePosition.Add(CheckPosition);
+                ShogiManager.CurrentSelectedPiece.OnBoardClick();
+                return;
             }
         }
         
-        if (pieceType == PieceId.Hisha) //飛車
+        if (_shogiManager.nowTurn && gameObject.CompareTag("Sente") ||
+            !_shogiManager.nowTurn && gameObject.CompareTag("Gote"))
         {
-            canMovePosition.Clear();
-            Vector2[] directions = { Vector2.up, Vector2.down, Vector2.left, Vector2.right };
-            foreach (var _direction in directions)
+            // 現在のターンを確認
+            if (!isSelect)
             {
-                for (int i = 1; i < 9; i++) //縦横8回オブジェクトがあるかを確認し、移動できるマスなのかをチェックする
+                isSelect = true; // 選択中に変更
+                ShogiManager.CurrentSelectedPiece = this; // 現在選択中の駒として設定
+                // リストを再読み込み
+                canMovePosition.Clear();
+                CanMovePosition(transform.position);
+                
+                foreach (Vector2 pos in canMovePosition)
                 {
-                    Vector2 CheckPosition = position + _direction * i;
-                    
-                    if (CheckPosition.x < 1 || CheckPosition.x > 9 || CheckPosition.y < 1 || CheckPosition.y > 9) break; //もし枠外まで確認したらその方向の処理をやめる
-                    
-                    Collider2D collider = Physics2D.OverlapPoint(CheckPosition); //確認した方向に駒のオブジェクトがあるかを確かめる
-                    if (collider != null)
-                    {
-                        Piece otherPiece = collider.GetComponent<Piece>();
-                        if (otherPiece != null)
-                        {
-                            if (otherPiece.gameObject.tag != gameObject.tag)
-                            {
-                                canMovePosition.Add(CheckPosition);
-                            }
-                            break;
-                        }
-                    }
-                    canMovePosition.Add(CheckPosition);
+                    Debug.Log($"移動可能位置: ({pos.x}, {pos.y})");
                 }
-            }
-            if (_promote)
-            {
-                canMovePosition.Add(new Vector2(position.x + 1, position.y + 1));
-                canMovePosition.Add(new Vector2(position.x - 1, position.y + 1));
-                canMovePosition.Add(new Vector2(position.x + 1, position.y - 1));
-                canMovePosition.Add(new Vector2(position.x - 1, position.y - 1));
-            }
-        }
-
-        if (pieceType == PieceId.Kaku)
-        {
-            Vector2[] directions = {new Vector2(1,1), new Vector2(1,-1), new Vector2(-1,1), new Vector2(-1,-1) };
-            
-            foreach (var _direction in directions)
-            {
-                for (int i = 1; i < 9; i++)
-                {
-                    Vector2 CheckPosition = position + _direction * i;
-                    if (CheckPosition.x < 1 || CheckPosition.x > 9 || CheckPosition.y < 1 || CheckPosition.y > 9) break;
-                    
-                    Collider2D otherCollider = Physics2D.OverlapPoint(CheckPosition);
-                    if (otherCollider != null)
-                    {
-                        Piece otherPiece = otherCollider.GetComponent<Piece>();
-                        if (otherPiece != null)
-                        {
-                            if (otherPiece.gameObject.tag != gameObject.tag)
-                            {
-                                canMovePosition.Add(CheckPosition);
-                            }
-                            break;
-                        }
-                    }
-                    canMovePosition.Add(CheckPosition);
-                }
-            }
-
-            if (_promote)
-            {
-                canMovePosition.Add(new Vector2(position.x, position.y + 1));
-                canMovePosition.Add(new Vector2(position.x, position.y - 1));
-                canMovePosition.Add(new Vector2(position.x + 1, position.y));
-                canMovePosition.Add(new Vector2(position.x - 1, position.y));
+                
+                Debug.Log("選択中：" + isSelect);
             }
         }
     }
 
-    void _passedPawn(Vector2 position) //金・成金の関数
+    public void OnBoardClick()
+    { 
+        if (Camera.main != null)
+        {
+            // マウス座標をオブジェクト座標に変換し、int型に変更
+            Vector2 mousePosition = Input.mousePosition;
+            Vector2 worldMousePos = Camera.main.ScreenToWorldPoint(mousePosition);
+            Vector2 intMousePos = new Vector2((int)Math.Round(worldMousePos.x), (int)Math.Round(worldMousePos.y));
+            
+            
+            Debug.Log(intMousePos);
+        
+            GameObject selectedPieceForTeam = null;
+        
+            // 将棋盤の範囲外のクリック判定をなくす
+            if (worldMousePos.x <= _minMax.x || worldMousePos.y <= _minMax.y || 
+                worldMousePos.x >= _maxsize.x || worldMousePos.y >= _maxsize.y) return;
+        
+        
+            //---設置ポジションがリストに含まれるか---
+            if (canMovePosition.Contains(intMousePos))
+            {
+                // Pieceのみのコライダーを取得する
+                LayerMask pieceLayer = LayerMask.GetMask("Piece");
+                Collider2D collidedPiece = Physics2D.OverlapPoint(worldMousePos, pieceLayer);
+                if (collidedPiece != null)
+                {
+                    selectedPieceForTeam = collidedPiece.gameObject;
+
+                }
+            
+                if (selectedPieceForTeam != null) //設置ポジションにすでに駒があるか
+                {
+                    // 選択した駒のマスにあるオブジェクトタグ
+                    GameObject enemyPiece = collidedPiece.gameObject;
+                    if (!enemyPiece.CompareTag(gameObject.tag))
+                    {
+                        Piece capturedPiece = enemyPiece.GetComponent<Piece>();
+
+                        if (!gameObject.CompareTag(enemyPiece.tag))
+                        {
+                            bool capturerIsSente = gameObject.CompareTag("Sente");
+                            _heldPiece.AddHeldPiece(capturedPiece.pieceType, capturerIsSente);
+                            
+                        }
+                    }
+                    else
+                    {
+                        isSelect = false;
+                        Debug.Log("すでに駒があります");
+                        return;
+                    }
+                }
+
+                // 駒を設置
+                _shogiPositionX = (int)intMousePos.x;
+                _shogiPositionY = (int)intMousePos.y;
+                transform.position = new Vector2(_shogiPositionX, _shogiPositionY); //駒の座標を変数の値にする
+
+                isSelect = false;
+                Debug.Log("Piece.OnBoardClick: 駒移動成功のため isSelect = false");
+                _shogiManager.nowTurn = !_shogiManager.nowTurn;
+                Debug.Log("現在のターン = " + _shogiManager.nowTurn);
+
+                //---成駒選択---
+                if (_shogiPositionY >= 7 && gameObject.CompareTag("Sente") || _shogiPositionY <= 3 && gameObject.CompareTag("Gote"))
+                {
+                    if (!_promote) 
+                    {
+                        _renderer.sprite = promotedSprite;
+                        _promote = true;
+                    }
+
+                    // この駒がと金なら、二歩防止リストからこの筋を外す
+                    if (pieceType == PieceId.Hu)
+                    {
+                        if (gameObject.CompareTag("Sente"))
+                        {
+                            _shogiManager.senteFuPosition[(int)intMousePos.x - 1] = false;
+                        }
+                        else if (gameObject.CompareTag("Gote"))
+                        {
+                            _shogiManager.goteFuPosition[(int)intMousePos.x - 1] = false;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                isSelect = false;
+                ShogiManager.CurrentSelectedPiece = null;
+                Debug.Log("Piece.OnBoardClick: 移動可能範囲外のため isSelect = false");
+            }
+        }
+    }
+    
+    
+    void Update()
     {
-        canMovePosition.Clear();
+        if (Input.GetMouseButtonDown(0) && isSelect)
+        {
+            //OnBoardClick();
+            // 既存の処理をそのまま使用
+        }
+
+    }
+
+    //-----移動範囲のリストを管理-----
+    void CanMovePosition(Vector2 position)
+    {
+        if (!_promote)
+        {
+            switch (pieceType)
+            {
+                case PieceId.Hu:
+                    canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
+                    break;
+
+                case PieceId.Keima:
+                    canMovePosition.Add(new Vector2(position.x + 1, position.y + 2 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x - 1, position.y + 2 * senteGote));
+                    break;
+
+                case PieceId.Gin:
+                    canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x - 1, position.y + 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x + 1, position.y + 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x - 1, position.y - 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x + 1, position.y - 1 * senteGote));
+                    break;
+
+                case PieceId.Kin:
+                    GetKinMovement(position);
+                    break;
+
+                case PieceId.Gyoku:
+                    canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y));
+                    canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y));
+                    canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y + 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y + 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y - 1 * senteGote));
+                    canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y - 1 * senteGote));
+                    break;
+
+                case PieceId.Kyosha:
+                    CheckLinearPaths(position, new[] { Vector2.up * senteGote });
+                    break;
+
+                case PieceId.Kaku:
+                    CheckLinearPaths(position,
+                        new[] { new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, 1), new Vector2(-1, -1) });
+                    break;
+
+                case PieceId.Hisha:
+                    CheckLinearPaths(position, new[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right });
+                    break;
+            }
+        }
+        else
+        {
+            // 成金の判別
+            if (PieceId.Hu == pieceType || PieceId.Kyosha == pieceType || 
+                PieceId.Keima == pieceType || PieceId.Gin == pieceType)
+            {
+                GetKinMovement(position);
+            }
+            
+            else if (PieceId.Kaku == pieceType)
+            {
+                CheckLinearPaths(position,
+                    new[] { new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, 1), new Vector2(-1, -1) });
+                
+                canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
+                canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
+                canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y));
+                canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y));
+            }
+            
+            else if (PieceId.Hisha == pieceType)
+            {
+                CheckLinearPaths(position,
+                    new[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right });
+                
+                canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y + 1 * senteGote));
+                canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y + 1 * senteGote));
+                canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y - 1 * senteGote));
+                canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y - 1 * senteGote));
+            }
+        }
+    }
+
+void CheckLinearPaths(Vector2 startPosition, Vector2[] directions)
+{
+    foreach (var direction in directions)
+    {
+        for (int i = 1; i < 9; i++)
+        {
+            Vector2 targetPosition = startPosition + direction * i;
+            if (targetPosition.x < 1 || targetPosition.x > 9 || targetPosition.y < 1 || targetPosition.y > 9) break;
+            
+            LayerMask pieceLayer = LayerMask.GetMask("Piece");
+            Collider2D foundPieceCol = Physics2D.OverlapPoint(targetPosition, pieceLayer);
+            
+            if (foundPieceCol != null)
+            {
+                // 確認したマスのオブジェクトの有無
+                Piece otherPiece = foundPieceCol.GetComponent<Piece>();
+                if (otherPiece != null)
+                {
+                    if (!otherPiece.CompareTag(gameObject.tag))
+                    {
+                        canMovePosition.Add(targetPosition);
+                    }
+                    break;
+                }
+            }
+            canMovePosition.Add(targetPosition);
+        }
+    }
+}
+    
+    void GetKinMovement(Vector2 position) //金・成金の関数
+    {
         canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
         canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y));
         canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y));
         canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y + 1 * senteGote));
         canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y + 1 * senteGote));
         canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
-    }
-
-    public void OnPointerClick(PointerEventData eventData)　// 駒のクリックを検知
-         {
-             if (_scriptA.nowTurn && gameObject.CompareTag("Sente") || !_scriptA.nowTurn && gameObject.CompareTag("Gote")) //先手後手でクリックできるかの判断
-             {
-                 ShogiManager gameManagerScript = FindObjectOfType<ShogiManager>();
-                 if (gameManagerScript.capturedPieceSente.Contains(gameObject) || gameManagerScript.capturedPieceGote.Contains(gameObject)) //持ち駒を選択したか否か
-                 {
-                     _isHeldPiece = true; //持ち駒の処理に変更
-                     Debug.Log("持ち駒を選択");
-                 }
-                 else
-                 {
-                     _selectPosition = true; // 選択中に変更
-                     if (_scriptA.nowTurn && gameObject.CompareTag("Sente")) senteGote = 1;
-                     else if (!_scriptA.nowTurn && gameObject.CompareTag("Gote")) senteGote = -1;
-                     canMovePosition.Clear();
-                     CanMovePosition(transform.position); // リストを読み込み
-                     Debug.Log("選択中：" + _selectPosition);
-                 }
-             }
-         }
-    void Update()
-{
-    
-    //画像を連動
-    
-    transform.position = new Vector2(_shogiPositionX, _shogiPositionY); //駒の座標を変数の値にする
-    StatePiece(); //TAGによって向きを変える
-
-    if (Input.GetMouseButtonDown(0))
-    {
-        Vector2 mousePosition = Input.mousePosition;
-        
-        if (Camera.main != null)
-        {
-            Vector2 worldMousePosition = Camera.main.ScreenToWorldPoint(mousePosition);
-
-            // 持ち駒を配置する処理を先に処理する
-            if (_isHeldPiece)
-            {
-                //将棋盤の外側に設置できないようにする
-                if (worldMousePosition.x < _minMax.x || worldMousePosition.y < _minMax.y ||
-                    worldMousePosition.x > _maxsize.x || worldMousePosition.y > _maxsize.y)
-                {
-                    Debug.Log("持ち駒を置けない範囲");
-                    return;
-                }
-
-                Vector2 intMousePos = new Vector2((int)Math.Round(worldMousePosition.x), (int)Math.Round(worldMousePosition.y));
-                
-                //持ち駒を設置する場所に駒がある場合
-                Collider2D collider = Physics2D.OverlapPoint(intMousePos);
-                if (collider != null)
-                {
-                    Debug.Log("駒が被っている");
-                    _isHeldPiece = false;
-                    Debug.Log(_isHeldPiece);
-                    return;
-                }
-
-                if (pieceType == PieceId.Hu) //二歩を感知
-                {
-                    int nowMousePosition = (int)intMousePos.x - 1;
-                    
-                    if (_scriptA.nowTurn && gameObject.CompareTag("Sente")) //先手の場合
-                    {
-                        if (_scriptA.senteFuPosition[nowMousePosition])
-                        {
-                            Debug.Log("二歩");
-                            return;
-                        }
-
-                        if ((int)intMousePos.y > 8)
-                        {
-                            Debug.Log("駒を設置できません");
-                            return;
-                        }
-                    }
-                    else if (_scriptA.nowTurn == false && gameObject.CompareTag("Gote")) //後手の場合
-                    {
-                        if (_scriptA.goteFuPosition[nowMousePosition])
-                        {
-                            Debug.Log("二歩");
-                            return;
-                        }
-                        if ((int)intMousePos.y < 2)
-                        {
-                            Debug.Log("駒を設置できません");
-                            return;
-                        }
-                    }
-                }
-
-                if (_scriptA.nowTurn && gameObject.CompareTag("Sente"))
-                {
-                    if (pieceType == PieceId.Keima)
-                    {
-                        if ((int)intMousePos.y > 7)
-                        {
-                            Debug.Log("駒を設置できません");
-                            return;
-                        }
-                    }
-
-                    if (pieceType == PieceId.Kyosha)
-                    {
-                        if ((int)intMousePos.x == 8)
-                        {
-                            Debug.Log("駒を設置できません");
-                            return;
-                        }
-                    }
-                }
-                else if (_scriptA.nowTurn == false && gameObject.CompareTag("Gote"))
-                {
-                    if (pieceType == PieceId.Keima)
-                    {
-                        if ((int)intMousePos.y < 3)
-                        {
-                            Debug.Log("駒を設置できません");
-                            return;
-                        }
-                    }
-                    if (pieceType == PieceId.Kyosha)
-                    {
-                        if ((int)intMousePos.x == 2)
-                        {
-                            Debug.Log("駒を設置できません");
-                            return;
-                        }
-                    }
-                }
-                
-                _shogiPositionX = (int)intMousePos.x;
-                _shogiPositionY = (int)intMousePos.y;
-
-                _isHeldPiece = false;
-                
-                ShogiManager gameManagerScript = FindObjectOfType<ShogiManager>();
-                
-                //持ち駒リストから削除する
-                if (gameObject.CompareTag("Sente"))
-                {
-                    gameManagerScript.capturedPieceSente.Remove(gameObject);
-                }
-                if (gameObject.CompareTag("Gote"))
-                {  
-                    gameManagerScript.capturedPieceGote.Remove(gameObject);
-                }
-                
-                _scriptA.nowTurn = !_scriptA.nowTurn;
-
-                Debug.Log("持ち駒を配置：" + _shogiPositionX + "." + _shogiPositionY);
-            }
-
-            // 以下は通常の選択状態での移動処理
-            if (_selectPosition)
-            {
-
-                if (worldMousePosition.x <= _minMax.x || worldMousePosition.y <= _minMax.y ||
-                    worldMousePosition.x >= _maxsize.x || worldMousePosition.y >= _maxsize.y) return;
-
-                Vector2 intMousePos = new Vector2((int)Math.Round(worldMousePosition.x), (int)Math.Round(worldMousePosition.y));
-
-                if (canMovePosition.Contains(intMousePos))
-                {
-                    Collider2D collider = Physics2D.OverlapPoint(worldMousePosition);
-                    if (collider != null)
-                    {
-                        GameObject obj = collider.gameObject;
-
-                        if (obj.CompareTag(gameObject.tag))
-                        {
-                            _selectPosition = false;
-                            return;
-                        }
-                        else
-                        {
-                            Piece capturedPiece = obj.GetComponent<Piece>();
-
-                            if (gameObject.CompareTag("Sente") && obj.CompareTag("Gote")) //先手が後手を取ったら
-                            {
-                                if (pieceType == PieceId.Hu)
-                                {
-                                    _scriptA.goteFuPosition[(int)(transform.position.x - 1)] = false; //後手の歩がとられた際goteFuPositionから現在のポジションを消す
-                                }
-                                if (capturedPiece.pieceType == PieceId.Gyoku)
-                                {
-                                    Debug.Log("先手の勝ち");
-                                    _shogiPositionX = (int)intMousePos.x;
-                                    _shogiPositionY = (int)intMousePos.y;
-                                    
-                                    obj.SetActive(false);
-                                    
-                                    StartCoroutine(ResetGameAfterDelay(3.0f)); // 3秒待ってリセット
-                                    return;
-                                }
-                                
-                                _scriptA.AddCapturedPiece(obj, true);
-                                
-                                Piece targetPiece = obj.GetComponent<Piece>();
-                                targetPiece.Reset();
-                            }
-                            else if (gameObject.CompareTag("Gote") && obj.CompareTag("Sente")) //後手が先手を取ったら
-                            {
-                                if (pieceType == PieceId.Hu)
-                                {
-                                    _scriptA.senteFuPosition[(int)(transform.position.x - 1)] = false;　//先手の歩がとられた際senteFuPositionから現在のポジションを消す
-                                }
-                                
-                                if (capturedPiece.pieceType == PieceId.Gyoku)
-                                {
-                                    Debug.Log("後手の勝ち");
-                                    _shogiPositionX = (int)intMousePos.x;
-                                    _shogiPositionY = (int)intMousePos.y;
-                                    
-                                    obj.SetActive(false);
-                                    
-                                    StartCoroutine(ResetGameAfterDelay(3.0f)); // 3秒待ってリセット
-                                    return;
-                                }
-                                _scriptA.AddCapturedPiece(obj, false);
-                                
-                                Piece targetPiece = obj.GetComponent<Piece>();
-                                targetPiece.Reset();
-                            }
-                        }
-                    }
-
-                    _shogiPositionX = (int)intMousePos.x;
-                    _shogiPositionY = (int)intMousePos.y;
-
-                    _selectPosition = false;
-                    _scriptA.nowTurn = !_scriptA.nowTurn;
-                    Debug.Log("nowTurn = " + _scriptA.nowTurn);
-
-                    if (_shogiPositionY >= 7 && gameObject.CompareTag("Sente") || _shogiPositionY <= 3 && gameObject.CompareTag("Gote"))
-                    {
-                        if (!_promote) _promote = Promote();
-                        if (pieceType == PieceId.Hu) //ト金になった際にlistから外す
-                        {
-                            if (gameObject.CompareTag("Sente"))
-                            {
-                                _scriptA.senteFuPosition[(int)intMousePos.x - 1] = false;
-                            }
-                            else if (gameObject.CompareTag("Gote"))
-                            {
-                                _scriptA.goteFuPosition[(int)intMousePos.x - 1] = false;
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    _selectPosition = false;
-                    Debug.Log("_selectPosition == cancel");
-                }
-            }
-        }
-    }
-}
-    public void SetPosition(int x, int y)
-    {
-        _shogiPositionX = x;
-        _shogiPositionY = y;
-    }
-    bool Promote() //成金
-    {
-        _renderer.sprite = promotedSprite;
-        return true;
     }
 
     public void Reset()

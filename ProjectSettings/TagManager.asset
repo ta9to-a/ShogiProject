@@ -13,8 +13,8 @@ TagManager:
   - Piece
   - Water
   - UI
-  - capturePiece
-  - 
+  - CapturePiece
+  - ShogiBoardLayer
   - 
   - 
   - 
