@@ -1,24 +1,30 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 public class ShogiManager : MonoBehaviour
 {
+    // シングルトン管理
     public static ShogiManager Instance { get; private set; }
-    
-    public bool nowTurn; //現在のターン
 
-    [SerializeField] GameObject piece;
+    // 現在選択されている駒（グローバル）
+    public static Piece CurrentSelectedPiece = null;        // 選択中の駒
 
-    // 駒のスプライト
+    // ゲーム進行・状態管理
+    public bool nowTurn; // 現在のターン（true:先手, false:後手）
+
+    // 二歩チェック用の歩の列情報
+    public bool[] senteFuPosition = new bool[9]; // 先手の歩の列状態
+    public bool[] goteFuPosition = new bool[9];  // 後手の歩の列状態
+
+    // 駒生成などのプレハブ参照
+    [SerializeField] GameObject piecePrefab;
+
+    // スプライト管理
     public Sprite[] defaultSprites = new Sprite[8];
     public Sprite[] promotedSprites = new Sprite[8];
-    
-    // 歩兵の位置確認
-    public bool[] senteFuPosition = new bool[9];
-    public bool[] goteFuPosition = new bool[9];
-    
-    public static Piece CurrentSelectedPiece = null;
+
     void Awake()
     {
         if (Instance != null && Instance != this)
@@ -44,8 +50,6 @@ public class ShogiManager : MonoBehaviour
         CreatePieces(Piece.PieceId.Gyoku, 1,new [] { 5, 5 }, 1, 9, "玉将");
         CreateDiagonalPieces(Piece.PieceId.Kaku, 2, 2, 8, 8, "角");
         CreateDiagonalPieces(Piece.PieceId.Hisha, 8, 2, 2, 8, "飛車");
-        
-        //gameObject.layer = LayerMask.NameToLayer("ShogiBoardLayer");
     }
     
     void OnMouseDown()
@@ -60,15 +64,44 @@ public class ShogiManager : MonoBehaviour
             LayerMask pieceLayer = LayerMask.GetMask("Piece");
             Collider2D hitPiece = Physics2D.OverlapPoint(worldMousePos, pieceLayer);
     
-            // 駒がクリックされた場合は何もしない（OnPointerClickで処理）
+            // 駒がクリックされた場合は何もしない
             if (hitPiece != null) return;
         }
 
-        // 盤面がクリックされた場合の処理
+        // 盤面がクリックされた場合、駒を設置
         if (CurrentSelectedPiece != null && CurrentSelectedPiece.isSelect)
         {
+            // 盤面のクリック処理を実行
             CurrentSelectedPiece.OnBoardClick();
         }
+        
+        // 持ち駒が選択されている場合は、持ち駒配置処理を実行
+        if (HeldPieceManager.FoundPiece != null && HeldPieceManager.IsHeldPieceSelected)
+        {
+            HeldPieceManager heldPieceManager = FindObjectOfType<HeldPieceManager>();
+            if (heldPieceManager != null)
+            {
+                // 持ち駒配置処理を実行
+                heldPieceManager.SelectedHeldPiece(HeldPieceManager.FoundPiece);
+            }
+        }
+    }
+    
+    public void ClearPieceSelection()
+    {
+        if (CurrentSelectedPiece != null)
+        {
+            CurrentSelectedPiece.isSelect = false;
+            CurrentSelectedPiece = null;
+            Debug.Log("駒の選択をクリアしました。");
+        }
+    }
+
+    public void ClearHeldPieceSelection()
+    {
+        HeldPieceManager.IsHeldPieceSelected = false;
+        HeldPieceManager.FoundPiece = null;
+        Debug.Log("持ち駒の選択をクリアしました。");
     }
 
     // 駒の配置の詳細
@@ -82,7 +115,7 @@ public class ShogiManager : MonoBehaviour
             int x = posX[i];
         
             // 先手の駒
-            GameObject sentePiece = Instantiate(piece, new Vector2(x, sentePosY), Quaternion.identity);
+            GameObject sentePiece = Instantiate(piecePrefab, new Vector2(x, sentePosY), Quaternion.identity);
             Piece sentePieceScript = sentePiece.GetComponent<Piece>();
             
             // 先手の駒の詳細設定
@@ -90,11 +123,15 @@ public class ShogiManager : MonoBehaviour
             sentePieceScript.ApplyStatePiece(pieceType);
             sentePieceScript.defaultSprite = defaultSprite;
             sentePieceScript.promotedSprite = promotedSprite;
+            if (pieceType == Piece.PieceId.Hu)
+            {
+                senteFuPosition[x - 1] = true;
+            }
             
             sentePiece.name = $"先手:{pieceName}.{i + 1}";
         
             // 後手の駒
-            GameObject gotePiece = Instantiate(piece, new Vector2(x, gotePosY), Quaternion.identity);
+            GameObject gotePiece = Instantiate(piecePrefab, new Vector2(x, gotePosY), Quaternion.identity);
             Piece gotePieceScript = gotePiece.GetComponent<Piece>();
             
             // 後手の駒の詳細設定
@@ -102,6 +139,10 @@ public class ShogiManager : MonoBehaviour
             gotePieceScript.ApplyStatePiece(pieceType);
             gotePieceScript.defaultSprite = defaultSprite;
             gotePieceScript.promotedSprite = promotedSprite;
+            if (pieceType == Piece.PieceId.Hu)
+            {
+                goteFuPosition[x - 1] = true;
+            }
             
             gotePiece.name = $"後手:{pieceName}.{i + 1}";
             
@@ -113,7 +154,7 @@ public class ShogiManager : MonoBehaviour
         Sprite promotedSprite = promotedSprites[(int)pieceType];
         
         // 先手の駒
-        GameObject sentePiece = Instantiate(piece, new Vector2(senteX, senteY), Quaternion.identity);
+        GameObject sentePiece = Instantiate(piecePrefab, new Vector2(senteX, senteY), Quaternion.identity);
         Piece sentePieceScript = sentePiece.GetComponent<Piece>();
             
         // 先手の駒の詳細設定
@@ -125,7 +166,7 @@ public class ShogiManager : MonoBehaviour
         sentePiece.name = $"先手:{pieceName}.1";
         
         // 後手の駒
-        GameObject gotePiece = Instantiate(piece, new Vector2(goteX, goteY), Quaternion.identity);
+        GameObject gotePiece = Instantiate(piecePrefab, new Vector2(goteX, goteY), Quaternion.identity);
         Piece gotePieceScript = gotePiece.GetComponent<Piece>();
             
         // 後手の駒の詳細設定

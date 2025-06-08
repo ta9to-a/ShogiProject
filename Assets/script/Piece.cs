@@ -4,38 +4,39 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class Piece : MonoBehaviour, IPointerClickHandler
 {
-    //変数一覧
-    int _shogiPositionX; // x現在地
-    int _shogiPositionY;　// y現在地
-    public bool isSelect; // 駒の選択状態
-    bool _promote; // 成駒
-
-    Vector2 _minMax = new (0.5f, 0.5f); // マウス選択の座標の下限値
-    Vector2 _maxsize = new (9.5f, 9.5f); // マウス選択の座標の上限値
-
-    public int senteGote; // 先手と後手の時の動きを変える変数
-    bool _isHeldPiece; // 持ち駒として選択されているか
-    int _huPosition; // 二歩防止ように座標を取得
-
-	public Sprite defaultSprite; //デフォルトの見た目
-    public Sprite promotedSprite; //成駒の見た目
+    //【位置・状態管理関連】
+    int _shogiPositionX;         // x現在地
+    int _shogiPositionY;         // y現在地
+    public bool isSelect;        // 駒の選択状態
+    bool _isPromote;             // 成駒かどうか
+    bool _isHeldPiece;           // 持ち駒として選択されているか
+    int _lastHuPositionY;        // 二歩防止用に座標を保存
+    public int moveDirection;    // 先手なら+1、後手なら-1
     
-    SpriteRenderer _renderer;
+    //【操作範囲・制限関連】
+    Vector2 _mouseMinPos = new (0.5f, 0.5f);                    // マウス選択の座標の下限値
+    Vector2 _mouseMaxPos = new (9.5f, 9.5f);                    // マウス選択の座標の上限値
+    [SerializeField] List<Vector2> canMovePositions = new ();   // 駒の移動範囲（リスト）
     
-    [SerializeField] List<Vector2> canMovePosition = new (); //駒の移動範囲(list)
+    //【見た目】
+    public Sprite defaultSprite;      // デフォルトの見た目
+    public Sprite promotedSprite;     // 成駒の見た目
+    SpriteRenderer _renderer;         // Sprite描画コンポーネント
     
-    //他スクリプトの情報を取得
-    ShogiManager _shogiManager;
-    HeldPiece _heldPiece;
+    //【他コンポーネント・管理スクリプト】
+    ShogiManager _shogiManager;         // ゲーム管理スクリプト
+    HeldPieceManager _heldPieceManager; // 持ち駒管理クラス
     
+    //【駒の種類識別】
     public enum PieceId
     {
         Hu, Kyosha, Keima, Gin, Kin, Kaku, Hisha, Gyoku,
     }
-    [SerializeField] PieceId pieceType;
+    [SerializeField] public PieceId pieceType; // 駒の種類
     
     //-------駒のタイプ設定-------
     public void ApplyStatePiece(PieceId type)
@@ -43,12 +44,12 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         if (gameObject.CompareTag("Sente"))
         {
             gameObject.transform.eulerAngles = new Vector3(0f, 0f, 0f);
-            senteGote = 1;
+            moveDirection = 1;
         }
         else if(gameObject.CompareTag("Gote"))
         {
             gameObject.transform.eulerAngles = new Vector3(0f, 0f, 180f);
-            senteGote = -1;
+            moveDirection = -1;
         }
         pieceType = type;
     }
@@ -56,7 +57,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     void Start()
     {
         _shogiManager = ShogiManager.Instance;
-        _heldPiece = HeldPiece.Instance;
+        _heldPieceManager = FindObjectOfType<HeldPieceManager>();
 
         _shogiPositionX = (int)transform.position.x;
         _shogiPositionY = (int)transform.position.y;
@@ -96,11 +97,18 @@ public class Piece : MonoBehaviour, IPointerClickHandler
             {
                 isSelect = true; // 選択中に変更
                 ShogiManager.CurrentSelectedPiece = this; // 現在選択中の駒として設定
-                // リストを再読み込み
-                canMovePosition.Clear();
-                CanMovePosition(transform.position);
                 
-                foreach (Vector2 pos in canMovePosition)
+                // 持ち駒の選択状況をリセット
+                if (HeldPieceManager.IsHeldPieceSelected || HeldPieceManager.FoundPiece != null)
+                {
+                    _shogiManager.ClearHeldPieceSelection();
+                }
+
+                // リストを再読み込み
+                canMovePositions.Clear();
+                ApplyMovePosition(transform.position);
+                
+                foreach (Vector2 pos in canMovePositions)
                 {
                     Debug.Log($"移動可能位置: ({pos.x}, {pos.y})");
                 }
@@ -119,18 +127,14 @@ public class Piece : MonoBehaviour, IPointerClickHandler
             Vector2 worldMousePos = Camera.main.ScreenToWorldPoint(mousePosition);
             Vector2 intMousePos = new Vector2((int)Math.Round(worldMousePos.x), (int)Math.Round(worldMousePos.y));
             
-            
-            Debug.Log(intMousePos);
-        
             GameObject selectedPieceForTeam = null;
         
             // 将棋盤の範囲外のクリック判定をなくす
-            if (worldMousePos.x <= _minMax.x || worldMousePos.y <= _minMax.y || 
-                worldMousePos.x >= _maxsize.x || worldMousePos.y >= _maxsize.y) return;
-        
-        
+            if (worldMousePos.x <= _mouseMinPos.x || worldMousePos.y <= _mouseMinPos.y || 
+                worldMousePos.x >= _mouseMaxPos.x || worldMousePos.y >= _mouseMaxPos.y) return;
+            
             //---設置ポジションがリストに含まれるか---
-            if (canMovePosition.Contains(intMousePos))
+            if (canMovePositions.Contains(intMousePos))
             {
                 // Pieceのみのコライダーを取得する
                 LayerMask pieceLayer = LayerMask.GetMask("Piece");
@@ -151,9 +155,15 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
                         if (!gameObject.CompareTag(enemyPiece.tag))
                         {
-                            bool capturerIsSente = gameObject.CompareTag("Sente");
-                            _heldPiece.AddHeldPiece(capturedPiece.pieceType, capturerIsSente);
-                            
+                            // 持ち駒に追加
+                            bool tagIsSente = gameObject.CompareTag("Sente");
+                            _heldPieceManager.AddHeldPiece(enemyPiece, capturedPiece.pieceType, tagIsSente);
+
+                            if (capturedPiece.pieceType == PieceId.Hu)
+                            {
+                                bool[] targetFuPositions = !tagIsSente ? _shogiManager.senteFuPosition : _shogiManager.goteFuPosition;
+                                targetFuPositions[(int)intMousePos.x - 1] = false;
+                            }
                         }
                     }
                     else
@@ -177,23 +187,19 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 //---成駒選択---
                 if (_shogiPositionY >= 7 && gameObject.CompareTag("Sente") || _shogiPositionY <= 3 && gameObject.CompareTag("Gote"))
                 {
-                    if (!_promote) 
+                    if (!_isPromote) 
                     {
+                        // この駒がと金なら、二歩防止リストからこの筋を外す
+                        if (pieceType == PieceId.Hu)
+                        {
+                            bool isSente = gameObject.CompareTag("Sente");
+                            bool[] targetFuPositions = isSente ? _shogiManager.senteFuPosition : _shogiManager.goteFuPosition;
+                        
+                            targetFuPositions[(int)intMousePos.x - 1] = false;
+                        }
+                        
                         _renderer.sprite = promotedSprite;
-                        _promote = true;
-                    }
-
-                    // この駒がと金なら、二歩防止リストからこの筋を外す
-                    if (pieceType == PieceId.Hu)
-                    {
-                        if (gameObject.CompareTag("Sente"))
-                        {
-                            _shogiManager.senteFuPosition[(int)intMousePos.x - 1] = false;
-                        }
-                        else if (gameObject.CompareTag("Gote"))
-                        {
-                            _shogiManager.goteFuPosition[(int)intMousePos.x - 1] = false;
-                        }
+                        _isPromote = true;
                     }
                 }
             }
@@ -206,39 +212,28 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         }
     }
     
-    
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0) && isSelect)
-        {
-            //OnBoardClick();
-            // 既存の処理をそのまま使用
-        }
-
-    }
-
     //-----移動範囲のリストを管理-----
-    void CanMovePosition(Vector2 position)
+    void ApplyMovePosition(Vector2 position)
     {
-        if (!_promote)
+        if (!_isPromote)
         {
             switch (pieceType)
             {
                 case PieceId.Hu:
-                    canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
+                    canMovePositions.Add(new Vector2(position.x, position.y + 1 * moveDirection));
                     break;
 
                 case PieceId.Keima:
-                    canMovePosition.Add(new Vector2(position.x + 1, position.y + 2 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x - 1, position.y + 2 * senteGote));
+                    canMovePositions.Add(new Vector2(position.x + 1, position.y + 2 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x - 1, position.y + 2 * moveDirection));
                     break;
 
                 case PieceId.Gin:
-                    canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x - 1, position.y + 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x + 1, position.y + 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x - 1, position.y - 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x + 1, position.y - 1 * senteGote));
+                    canMovePositions.Add(new Vector2(position.x, position.y + 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x - 1, position.y + 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x + 1, position.y + 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x - 1, position.y - 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x + 1, position.y - 1 * moveDirection));
                     break;
 
                 case PieceId.Kin:
@@ -246,18 +241,18 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                     break;
 
                 case PieceId.Gyoku:
-                    canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y));
-                    canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y));
-                    canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y + 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y + 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y - 1 * senteGote));
-                    canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y - 1 * senteGote));
+                    canMovePositions.Add(new Vector2(position.x, position.y + 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y));
+                    canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y));
+                    canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y + 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y + 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x, position.y - 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y - 1 * moveDirection));
+                    canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y - 1 * moveDirection));
                     break;
 
                 case PieceId.Kyosha:
-                    CheckLinearPaths(position, new[] { Vector2.up * senteGote });
+                    CheckLinearPaths(position, new[] { Vector2.up * moveDirection });
                     break;
 
                 case PieceId.Kaku:
@@ -284,10 +279,10 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 CheckLinearPaths(position,
                     new[] { new Vector2(1, 1), new Vector2(1, -1), new Vector2(-1, 1), new Vector2(-1, -1) });
                 
-                canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
-                canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
-                canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y));
-                canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y));
+                canMovePositions.Add(new Vector2(position.x, position.y + 1 * moveDirection));
+                canMovePositions.Add(new Vector2(position.x, position.y - 1 * moveDirection));
+                canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y));
+                canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y));
             }
             
             else if (PieceId.Hisha == pieceType)
@@ -295,10 +290,10 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 CheckLinearPaths(position,
                     new[] { Vector2.up, Vector2.down, Vector2.left, Vector2.right });
                 
-                canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y + 1 * senteGote));
-                canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y + 1 * senteGote));
-                canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y - 1 * senteGote));
-                canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y - 1 * senteGote));
+                canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y + 1 * moveDirection));
+                canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y + 1 * moveDirection));
+                canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y - 1 * moveDirection));
+                canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y - 1 * moveDirection));
             }
         }
     }
@@ -323,29 +318,29 @@ void CheckLinearPaths(Vector2 startPosition, Vector2[] directions)
                 {
                     if (!otherPiece.CompareTag(gameObject.tag))
                     {
-                        canMovePosition.Add(targetPosition);
+                        canMovePositions.Add(targetPosition);
                     }
                     break;
                 }
             }
-            canMovePosition.Add(targetPosition);
+            canMovePositions.Add(targetPosition);
         }
     }
 }
     
     void GetKinMovement(Vector2 position) //金・成金の関数
     {
-        canMovePosition.Add(new Vector2(position.x, position.y + 1 * senteGote));
-        canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y));
-        canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y));
-        canMovePosition.Add(new Vector2(position.x + 1 * senteGote, position.y + 1 * senteGote));
-        canMovePosition.Add(new Vector2(position.x - 1 * senteGote, position.y + 1 * senteGote));
-        canMovePosition.Add(new Vector2(position.x, position.y - 1 * senteGote));
+        canMovePositions.Add(new Vector2(position.x, position.y + 1 * moveDirection));
+        canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y));
+        canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y));
+        canMovePositions.Add(new Vector2(position.x + 1 * moveDirection, position.y + 1 * moveDirection));
+        canMovePositions.Add(new Vector2(position.x - 1 * moveDirection, position.y + 1 * moveDirection));
+        canMovePositions.Add(new Vector2(position.x, position.y - 1 * moveDirection));
     }
 
     public void Reset()
     {
-        _promote = false;
+        _isPromote = false;
         _renderer.sprite = defaultSprite;
     }
 
