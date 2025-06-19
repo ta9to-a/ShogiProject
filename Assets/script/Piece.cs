@@ -54,13 +54,13 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     {
         if (gameObject.CompareTag("Sente"))
         {
-            gameObject.transform.eulerAngles = new Vector3(0f, 0f, 0f);
-            moveDirection = 1;
+            gameObject.transform.eulerAngles = new Vector3(0f, 0f, 180f);
+            moveDirection = -1;
         }
         else if (gameObject.CompareTag("Gote"))
         {
-            gameObject.transform.eulerAngles = new Vector3(0f, 0f, 180f);
-            moveDirection = -1;
+            gameObject.transform.eulerAngles = new Vector3(0f, 0f, 0f);
+            moveDirection = 1;
         }
 
         pieceType = type;
@@ -93,8 +93,6 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
                     canMovePositions.Clear(); // 移動可能位置のリストをクリア
                     _shogiManager.ClearHighlights();
-
-                    Debug.Log("駒の選択を解除しました");
                     return;
                 }
 
@@ -192,7 +190,6 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                     {
                         _shogiManager.ClearHighlights();
                         isSelect = false;
-                        Debug.Log("すでに駒があります");
                         return;
                     }
                 }
@@ -202,16 +199,18 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 _shogiPositionX = (int)intMousePos.x;
                 _shogiPositionY = (int)intMousePos.y;
                 transform.position = new Vector2(_shogiPositionX, _shogiPositionY); //駒を動かす
-                Debug.Log($"{_shogiPositionX},{_shogiPositionY}:{pieceType}");
+                
+                string pieceTag = gameObject.CompareTag("Sente") ? "☖" : "☗";
+                Debug.Log($"{pieceTag}{_shogiPositionX},{_shogiPositionY}:{pieceType}");
 
                 // --- 敵陣の判定処理 ---
                 bool wasInEnemyCamp =
-                    (gameObject.CompareTag("Sente") && prevY >= 7) ||
-                    (gameObject.CompareTag("Gote") && prevY <= 3);
+                    (gameObject.CompareTag("Sente") && prevY <= 3) ||
+                    (gameObject.CompareTag("Gote") && prevY >= 7);
 
                 bool nowInEnemyCamp =
-                    (gameObject.CompareTag("Sente") && _shogiPositionY >= 7) ||
-                    (gameObject.CompareTag("Gote") && _shogiPositionY <= 3);
+                    (gameObject.CompareTag("Sente") && _shogiPositionY <= 3) ||
+                    (gameObject.CompareTag("Gote") && _shogiPositionY >= 7);
 
                 // このターンで敵陣から出たかを記録（選択を後回しにした場合のフラグ）
                 _leftEnemyCampThisTurn = wasInEnemyCamp && !nowInEnemyCamp;
@@ -234,22 +233,18 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                             
                             case PieceId.Hu:
                             case PieceId.Kyosha:
-                                if (_shogiPositionY >= 9 && gameObject.CompareTag("Sente") ||
-                                    _shogiPositionY <= 1 && gameObject.CompareTag("Gote"))
+                                if (_shogiPositionY <= 1 && gameObject.CompareTag("Sente") ||
+                                    _shogiPositionY >= 9 && gameObject.CompareTag("Gote"))
                                 {
-                                    // 強制的に成る
-                                    Debug.Log("強制的に成る");
                                     ForcePromote(intMousePos);
                                     return;
                                 }
                                 break;
         
                             case PieceId.Keima:
-                                if (_shogiPositionY >= 8 && gameObject.CompareTag("Sente") ||
-                                    _shogiPositionY <= 2 && gameObject.CompareTag("Gote"))
+                                if (_shogiPositionY <= 2 && gameObject.CompareTag("Sente") ||
+                                    _shogiPositionY >= 8 && gameObject.CompareTag("Gote"))
                                 {
-                                    // 強制的に成る
-                                    Debug.Log("強制的に成る");
                                     ForcePromote(intMousePos);
                                     return;
                                 }
@@ -274,8 +269,6 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
                 // ハイライトをクリア
                 _shogiManager.ClearHighlights();
-
-                Debug.Log("Piece.OnBoardClick: 移動可能範囲外のため isSelect = false");
             }
         }
     }
@@ -294,13 +287,10 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 bool[] targetFuPositions = isSente ? _shogiManager.senteFuPosition : _shogiManager.goteFuPosition;
                 targetFuPositions[(int)position.x - 1] = false;
             }
-
-            Debug.Log("成る選択をしました");
         }
         else
         {
             _leftEnemyCampThisTurn = true;
-            Debug.Log("ならない選択をしました");
         }
 
         ShogiManager.CanSelect = true;
@@ -322,8 +312,6 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
             targetFuPositions[(int)intMousePos.x - 1] = false;
         }
-    
-        Debug.Log("強制的に成りました");
         ShogiManager.CanSelect = true;
         _shogiManager.activePlayer = !_shogiManager.activePlayer;
     }

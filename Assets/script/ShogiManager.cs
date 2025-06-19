@@ -63,14 +63,14 @@ public class ShogiManager : MonoBehaviour
         falseButton.onClick.AddListener(() => Choose(false));
         
         // 全ての駒の配置
-        CreatePieces(Piece.PieceId.Hu,9,new [] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 3, 7, "歩兵");
-        CreatePieces(Piece.PieceId.Keima,2,new [] { 2, 8 }, 1, 9, "桂馬");
-        CreatePieces(Piece.PieceId.Gin, 2, new [] { 3, 7 }, 1, 9, "銀将");
-        CreatePieces(Piece.PieceId.Kin, 2,new [] { 4, 6 }, 1, 9, "金将");
-        CreatePieces(Piece.PieceId.Kyosha, 2,new [] { 1, 9 }, 1, 9, "香車");
-        CreatePieces(Piece.PieceId.Gyoku, 1,new [] { 5, 5 }, 1, 9, "玉将");
-        CreateDiagonalPieces(Piece.PieceId.Kaku, 2, 2, 8, 8, "角");
-        CreateDiagonalPieces(Piece.PieceId.Hisha, 8, 2, 2, 8, "飛車");
+        CreatePieces(Piece.PieceId.Hu,9,new [] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 7, 3, "歩兵");
+        CreatePieces(Piece.PieceId.Keima,2,new [] { 2, 8 }, 9, 1, "桂馬");
+        CreatePieces(Piece.PieceId.Gin, 2, new [] { 3, 7 }, 9, 1, "銀将");
+        CreatePieces(Piece.PieceId.Kin, 2,new [] { 4, 6 }, 9, 1, "金将");
+        CreatePieces(Piece.PieceId.Kyosha, 2,new [] { 1, 9 }, 9, 1, "香車");
+        CreatePieces(Piece.PieceId.Gyoku, 1,new [] { 5, 5 }, 9, 1, "玉将");
+        CreateDiagonalPieces(Piece.PieceId.Kaku, 8, 8, 2, 2, "角");
+        CreateDiagonalPieces(Piece.PieceId.Hisha, 2, 8, 8, 2, "飛車");
     }
     
     //----------------------------------
@@ -345,7 +345,6 @@ public class ShogiManager : MonoBehaviour
         //　選択画面を表示
         buttons.SetActive(true);
         CanSelect = false;
-        Debug.Log("選択画面を表示");
         
         Image promoteImage = trueButton.GetComponentInChildren<Image>();
         Image defaltImage = falseButton.GetComponentInChildren<Image>();

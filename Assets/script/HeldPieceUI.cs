@@ -17,13 +17,13 @@ public class HeldPieceUI : MonoBehaviour
     public void CreateHeldPieces(bool isSente)
     {
         int cols = 2;  // 横に2個ずつ
-        float pieceWidth = isSente ? 1.5f : -1.5f; // 先手は右向き、後手は左向き
+        float pieceWidth = isSente ? -1.5f : 1.5f; // 先手は右向き、後手は左向き
         float pieceHeight = 1f;
 
         // ベースポジション（先手 or 後手）
-        Vector3 basePosition = isSente 
-            ? new Vector3(10.75f, 3.7f, 0f)          // 先手：左上
-            : new Vector3(-0.75f, 6.2f, 0f);         // 後手：右下
+        Vector3 basePosition = isSente
+            ? new Vector3(-0.75f, 6.2f, 0f)  // 先手：左上
+            : new Vector3(10.75f, 3.7f, 0f); // 後手：右下
 
         int placedIndex = 0;
         for (int i = 0; i < shogiManager.defaultSprites.Length - 1; i++)
@@ -34,8 +34,8 @@ public class HeldPieceUI : MonoBehaviour
             {
                 // 歩だけは特別な位置に
                 position = basePosition + (isSente
-                    ? new Vector3(0f, -3f * pieceHeight, 0f) // 先手：下に配置
-                    : new Vector3(0f, 3f * pieceHeight, 0f)); // 後手：上に配置
+                    ? new Vector3(0f, 3f * pieceHeight, 0f) // 先手：下に配置
+                    : new Vector3(0f, -3f * pieceHeight, 0f)); // 後手：上に配置
             }
             else
             {
@@ -43,8 +43,8 @@ public class HeldPieceUI : MonoBehaviour
                 int col = placedIndex % cols;  // 横方向にずらす
 
                 position = basePosition + (isSente
-                    ? new Vector3(col * pieceWidth, -row * pieceHeight, 0f) // 先手：下方向
-                    : new Vector3(col * pieceWidth, row * pieceHeight, 0f)); // 後手：上方向
+                    ? new Vector3(col * pieceWidth, row * pieceHeight, 0f) // 先手：下方向
+                    : new Vector3(col * pieceWidth, -row * pieceHeight, 0f)); // 後手：上方向
 
                 placedIndex++;
             }
@@ -61,7 +61,7 @@ public class HeldPieceUI : MonoBehaviour
             data.isHeldPieceCount = true;
 
             // 後手は180度回転
-            if (!isSente) heldPieceObj.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
+            if (isSente) heldPieceObj.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
             
             SpriteRenderer originalRenderer = heldPieceObj.GetComponent<SpriteRenderer>();
             originalRenderer.sortingOrder = 18;
@@ -92,7 +92,7 @@ public class HeldPieceUI : MonoBehaviour
         // 新しいクローンの生成（count-1個、元の駒は除く）
         for (int i = 1; i < count; i++)
         {
-            int isSenteDirection = isSente ? 1 : -1; // 先手なら1、後手なら-1
+            int isSenteDirection = isSente ? -1 : 1; // 先手なら1、後手なら-1
             Vector3 clonePos = basePosition + new Vector3(0.25f * i * isSenteDirection, 0, 0);
             GameObject clone = Instantiate(heldPiecePrefab, clonePos, Quaternion.identity);
     
@@ -112,7 +112,7 @@ public class HeldPieceUI : MonoBehaviour
             data.isSente = isSente;
             data.isHeldPieceCount = false;
     
-            if (!isSente) clone.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
+            if (isSente) clone.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
             
             string isSenteString = isSente ? "先手" : "後手";
             clone.name = $"{isSenteString}:{pieceType},{count}";

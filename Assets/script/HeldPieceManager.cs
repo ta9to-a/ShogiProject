@@ -42,7 +42,6 @@ public class HeldPieceManager : MonoBehaviour
         pieceScript.ApplyStatePiece(pieceType);
         
         enemyPiece.SetActive(false);
-        Debug.Log($"駒を入手: {enemyPiece.tag} ({pieceType})");
         
         // 先手か後手かを判定
         bool capturerIsSente = enemyPiece.CompareTag("Sente");
@@ -67,13 +66,8 @@ public class HeldPieceManager : MonoBehaviour
 
         if (FoundPiece != null)
         {
-            Debug.Log($"持ち駒の {FoundPiece} を選択しました！");
             IsHeldPieceSelected = true; // 持ち駒が選択された状態にする
             _shogiManager.CreateDropHighlightSquares(pieceType);
-        }
-        else
-        {
-            Debug.Log($"持ち駒に {pieceType} はありません。");
         }
     }
 
@@ -93,7 +87,6 @@ public class HeldPieceManager : MonoBehaviour
             if (intMousePos.x <= mouseMinPos.x || intMousePos.y <= mouseMinPos.y ||
                 intMousePos.x >= mouseMaxPos.x || intMousePos.y >= mouseMaxPos.y)
             {
-                Debug.Log("マウスの位置が盤面外です。");
                 _shogiManager.ClearHeldPieceSelection();
                 return;
             }
@@ -103,7 +96,6 @@ public class HeldPieceManager : MonoBehaviour
             Collider2D collidedPiece = Physics2D.OverlapPoint(worldMousePos, pieceLayer);
             if (collidedPiece != null)
             {
-                Debug.Log("すでに駒があるため、設置できません。");
                 return;
             }
 
@@ -115,7 +107,6 @@ public class HeldPieceManager : MonoBehaviour
 
                 if (targetFuPositions[(int)intMousePos.x - 1])
                 {
-                    Debug.Log("二歩のため配置できません。");
                     _shogiManager.ClearHeldPieceSelection();
                     return;
                 }
@@ -130,13 +121,11 @@ public class HeldPieceManager : MonoBehaviour
                 case Piece.PieceId.Kyosha:
                     if (intMousePos.y >= 9 && foundPiece.CompareTag("Sente"))
                     {
-                        Debug.Log($"{pieceType}は9段目に配置できません。");
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
                     else if (intMousePos.y <= 1 && foundPiece.CompareTag("Gote"))
                     {
-                        Debug.Log($"{pieceType}は1段目に配置できません。");
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
@@ -144,13 +133,11 @@ public class HeldPieceManager : MonoBehaviour
                 case Piece.PieceId.Keima:
                     if (intMousePos.x >= 8 && foundPiece.CompareTag("Sente"))
                     {
-                        Debug.Log("桂馬は8列目に配置できません。");
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
                     else if (intMousePos.x <= 2 && foundPiece.CompareTag("Gote"))
                     {
-                        Debug.Log("桂馬は2列目に配置できません。");
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
