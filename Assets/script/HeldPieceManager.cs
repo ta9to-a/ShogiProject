@@ -46,7 +46,7 @@ public class HeldPieceManager : MonoBehaviour
         // 先手か後手かを判定
         bool capturerIsSente = enemyPiece.CompareTag("Sente");
         if (capturerIsSente) senteInactivePieces.Add(enemyPiece);   // 先手の持ち駒リストに追加
-        else goteInactivePieces.Add(enemyPiece);                    // 後手の持ち駒リストに追加
+        else goteInactivePieces.Add(enemyPiece);                    //後手の持ち駒リストに追加
         
         // その駒の種類の持ち駒数を増やす
         if (capturerIsSente) senteHeldPieceType[pieceTypeIndex]++;
