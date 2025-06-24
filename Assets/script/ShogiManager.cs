@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 
 public class ShogiManager : MonoBehaviour
 {
@@ -40,6 +41,8 @@ public class ShogiManager : MonoBehaviour
     private bool? _playerChoice;
     private Camera _camera;
 
+    Piece _piece;
+    // [SerializeField] ShogiEngineManager shogiEngineManager;
 
     void Awake()
     {
@@ -195,7 +198,6 @@ public class ShogiManager : MonoBehaviour
             CurrentSelectedPiece.isSelect = false;
             CurrentSelectedPiece = null;
             ClearHighlights();
-            Debug.Log("駒の選択をクリアしました。");
         }
     }
 
@@ -204,8 +206,130 @@ public class ShogiManager : MonoBehaviour
         HeldPieceManager.IsHeldPieceSelected = false;
         HeldPieceManager.FoundPiece = null;
         ClearHighlights();
-        Debug.Log("持ち駒の選択をクリアしました。");
     }
+    
+    //----------------------------------
+    //-----------AI専用処理--------------
+    //----------------------------------
+    // 文字列から移動情報を解析する
+    /*(int fromX, int fromY, int toX, int toY)? ParseMoveString(string moveString)
+    {
+        //　文字列チェック
+        if (moveString.Length < 4)
+        {
+            Debug.LogWarning($"Invalid move format: {moveString}");
+            return null;
+        }
+        
+        // 駒の種類を取得
+        int shogiFromX = int.Parse(moveString[0].ToString());
+        char fromYChar = moveString[1];
+        int shogiToX = int.Parse(moveString[2].ToString());
+        char toYChar = moveString[3];
+        
+        int fromX = 10 - shogiFromX; // 1→9, 2→8, ..., 9→1
+        int toX = 10 - shogiToX;
+        
+        // 文字を数字に変換
+        int fromY = fromYChar - 'a' + 1; // a→1, b→2, ..., i→9
+        int toY = toYChar - 'a' + 1;
+    
+        Debug.Log($"🔄 Convert: {moveString} → 将棋({shogiFromX},{fromYChar}) → Unity({fromX},{fromY}) to Unity({toX},{toY})");
+        return (fromX, fromY, toX, toY);
+    }
+    
+    // エンジンからの移動情報を受信する
+    public void ReceiveEngineMove(string moveString)
+    {
+        var moveData = ParseMoveString(moveString);
+        if (moveData != null)
+        {
+            Debug.Log($"📍 Engine move: ({moveData.Value.fromX},{moveData.Value.fromY}) → ({moveData.Value.toX},{moveData.Value.toY})");
+            
+            ExecuteEngineMoveAsync(
+                moveData.Value.fromX, moveData.Value.fromY, 
+                moveData.Value.toX, moveData.Value.toY).Forget();
+        }
+    }
+    
+    private async UniTaskVoid ExecuteEngineMoveAsync(int fromX, int fromY, int toX, int toY)
+    {
+        // メインスレッドに切り替え
+        await UniTask.SwitchToMainThread();
+        ExecuteEngineMove(fromX, fromY, toX, toY);
+    }
+
+    void ExecuteEngineMove(int fromX, int fromY, int toX, int toY)
+    {
+        // ✅ 1行だけの簡潔ログ
+        Debug.Log($"🎯 Turn: {(activePlayer ? "先手" : "後手")} | Engine trying: ({fromX},{fromY})→({toX},{toY})");
+    
+        // AI手番チェック
+        if (activePlayer)
+        {
+            Debug.LogWarning($"❌ Wrong turn! Current: 先手, but AI(後手) is trying to move");
+            return;
+        }
+    
+        // 駒を探す
+        LayerMask pieceLayer = LayerMask.GetMask("Piece");
+        Vector2 fromPosition = new Vector2(fromX, fromY);
+        Collider2D fromPieceCollider = Physics2D.OverlapPoint(fromPosition, pieceLayer);
+
+        if (fromPieceCollider != null)
+        {
+            Piece movingPiece = fromPieceCollider.GetComponent<Piece>();
+            if (movingPiece != null)
+            {
+                string expectedTag = "Gote";
+                string actualTag = fromPieceCollider.gameObject.tag;
+            
+                Debug.Log($"🔍 Piece check: Expected={expectedTag}, Actual={actualTag}");
+            
+                if (actualTag != expectedTag)
+                {
+                    Debug.LogError($"❌ Wrong piece! AI trying to move {actualTag} piece, but should move {expectedTag}");
+                    return;
+                }
+                
+                Vector2 toPosition = new Vector2(toX, toY);
+                movingPiece.ExecuteAIMove(toPosition);
+                
+                // ✅ AIの手を記譜法に変換して履歴に追加
+                string aiMoveNotation = ConvertToShogiNotation(fromPosition, toPosition);
+                Debug.Log($"🤖 AI move: {aiMoveNotation}");
+            
+                ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
+                if (engineManager != null)
+                {
+                    engineManager.AddMoveToHistory(aiMoveNotation);
+                }
+                
+                activePlayer = !activePlayer;
+                Debug.Log($"✅ Move OK");
+            }
+        }
+        else
+        {
+            Debug.LogError($"❌ 駒がない ({fromX},{fromY})");
+        }
+    }
+    
+    string ConvertToShogiNotation(Vector2 fromPos, Vector2 toPos)
+    {
+        // Unity座標 → 将棋座標
+        int shogiFromX = 10 - (int)fromPos.x;
+        int shogiToX = 10 - (int)toPos.x;
+    
+        char fromYChar = (char)('a' + (int)fromPos.y - 1);
+        char toYChar = (char)('a' + (int)toPos.y - 1);
+    
+        string notation = $"{shogiFromX}{fromYChar}{shogiToX}{toYChar}";
+    
+        Debug.Log($"🔄 AI move Unity({fromPos.x},{fromPos.y}) → 将棋({shogiFromX},{fromYChar}) = {notation}");
+    
+        return notation;
+    }*/
     
     //----------------------------------
     //---------ハイライトの管理------------
@@ -245,8 +369,7 @@ public class ShogiManager : MonoBehaviour
                 else if (canMovePositions.Contains(highlightPosition) && nowCheckedPiece != null)
                 {
                     string currentTurnTag = activePlayer ? "Sente" : "Gote";
-    
-                    // 現在のターンの駒かチェックしてDebug.Log出力
+                    
                     if (nowCheckedPiece.CompareTag(currentTurnTag))
                     {
                         CreateHighlightSquare(highlightPosition);
@@ -263,7 +386,6 @@ public class ShogiManager : MonoBehaviour
             if (pieceType == Piece.PieceId.Hu)
             {
                 bool fuPositionCheck = activePlayer ? senteFuPosition[x - 1] : goteFuPosition[x - 1];
-                Debug.Log(fuPositionCheck);
                 if (fuPositionCheck)
                 {
                     // その列（x座標）の全マスを設置不可としてハイライト
@@ -311,10 +433,10 @@ public class ShogiManager : MonoBehaviour
         {
             case Piece.PieceId.Hu:    // 歩兵
             case Piece.PieceId.Kyosha: // 香車
-                return activePlayer ? y < 9 : y > 1;
+                return activePlayer ? y > 1 : y < 9;
             
             case Piece.PieceId.Keima:  // 桂馬
-                return activePlayer ? y < 8 : y > 2;
+                return activePlayer ? y > 2 : y < 8;
             
             default:
                 return true;
@@ -379,3 +501,4 @@ public class ShogiManager : MonoBehaviour
         onComplete?.Invoke(_playerChoice != null && _playerChoice.Value);
     }
 }
+

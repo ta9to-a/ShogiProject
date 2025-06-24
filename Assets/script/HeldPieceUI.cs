@@ -21,9 +21,9 @@ public class HeldPieceUI : MonoBehaviour
         float pieceHeight = 1f;
 
         // ベースポジション（先手 or 後手）
-        Vector3 basePosition = isSente
-            ? new Vector3(-0.75f, 6.2f, 0f)  // 先手：左上
-            : new Vector3(10.75f, 3.7f, 0f); // 後手：右下
+        Vector3 basePosition = isSente 
+            ? new Vector3(-0.75f, 6.2f, 0f)          // 先手：左上
+            : new Vector3(10.75f, 3.7f, 0f);         // 後手：右下
 
         int placedIndex = 0;
         for (int i = 0; i < shogiManager.defaultSprites.Length - 1; i++)
@@ -104,7 +104,7 @@ public class HeldPieceUI : MonoBehaviour
     
             // 左側の駒ほど高いsortingOrderを設定（左側が上に表示）
             cloneRenderer.sortingOrder = count - i;
-            float colorValue = 0.7f + 0.1f * (count - i); // 色の明るさを調整
+            float colorValue = 0.7f + 0.05f * (count - i); // 色の明るさを調整
             cloneRenderer.color = new Color(colorValue, colorValue, colorValue, 1.0f);
             
             HeldPieceData data = clone.AddComponent<HeldPieceData>();

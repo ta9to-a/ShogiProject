@@ -1092,6 +1092,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84e9d9a1726124dbda6f6ae6e7603307, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  shogiManager: {fileID: 2035514905}
 --- !u!4 &2040609623
 Transform:
   m_ObjectHideFlags: 0

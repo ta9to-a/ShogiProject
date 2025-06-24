@@ -119,24 +119,24 @@ public class HeldPieceManager : MonoBehaviour
             {
                 case Piece.PieceId.Hu:
                 case Piece.PieceId.Kyosha:
-                    if (intMousePos.y >= 9 && foundPiece.CompareTag("Sente"))
+                    if (intMousePos.y <= 1 && foundPiece.CompareTag("Sente"))
                     {
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
-                    else if (intMousePos.y <= 1 && foundPiece.CompareTag("Gote"))
+                    else if (intMousePos.y >= 9 && foundPiece.CompareTag("Gote"))
                     {
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
                     break;
                 case Piece.PieceId.Keima:
-                    if (intMousePos.x >= 8 && foundPiece.CompareTag("Sente"))
+                    if (intMousePos.x <= 2 && foundPiece.CompareTag("Sente"))
                     {
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
-                    else if (intMousePos.x <= 2 && foundPiece.CompareTag("Gote"))
+                    else if (intMousePos.x >= 8 && foundPiece.CompareTag("Gote"))
                     {
                         _shogiManager.ClearHeldPieceSelection();
                         return;
