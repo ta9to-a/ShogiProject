@@ -22,7 +22,7 @@ public class HeldPieceManager : MonoBehaviour
     ShogiManager _shogiManager;
     
     public static Piece.PieceId SelectedPieceType;
-
+    
     void Start()
     {
         _shogiManager = FindObjectOfType<ShogiManager>();
@@ -55,19 +55,18 @@ public class HeldPieceManager : MonoBehaviour
         OnHeldPieceChanged?.Invoke();
     }
 
-    public void RemoveHeldPiece(Piece.PieceId pieceType, bool tagIsSente)
+    public void RemoveHeldPiece(Piece.PieceId selectPieceType, bool tagIsSente)
     {
         // 先手・後手の持ち駒リストを選ぶ
         List<GameObject> targetList = tagIsSente ? senteInactivePieces : goteInactivePieces;
         // 持ち駒リストから指定された駒の種類を探す
-        FoundPiece = targetList.Find(
-            target => target.GetComponent<Piece>()?.pieceType == pieceType
+        FoundPiece = targetList.Find(target => target.GetComponent<Piece>()?.pieceType == selectPieceType
         );
-
-        if (FoundPiece != null)
+        
+        if (FoundPiece != null || tagIsSente) // プレイヤーのみ
         {
             IsHeldPieceSelected = true; // 持ち駒が選択された状態にする
-            _shogiManager.CreateDropHighlightSquares(pieceType);
+            _shogiManager.CreateDropHighlightSquares(selectPieceType);
         }
     }
 
@@ -162,10 +161,45 @@ public class HeldPieceManager : MonoBehaviour
             FoundPiece = null;
 
             _shogiManager.ClearHighlights();
-            
-            _shogiManager.activePlayer = !_shogiManager.activePlayer; // ターンを切り替える
+
+            string moveNotation = GenerateDropNotation(pieceType, intMousePos);
+
+            ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
+            if (engineManager != null)
+            {
+                engineManager.AddMoveToHistory(moveNotation);
+            }
+
+            ShogiManager.activePlayer = !ShogiManager.activePlayer;
+
+            if (!ShogiManager.activePlayer) // 後手（AI）のターン
+            {
+                if (engineManager != null)
+                {
+                    engineManager.RequestBestMoveWithHistory();
+                    Debug.Log("AIのターン: 最善手を要求");
+                }
+            }
             
             OnHeldPieceChanged?.Invoke();
         }
+    }
+    private string GenerateDropNotation(Piece.PieceId pieceType, Vector2 position)
+    {
+        string pieceChar = pieceType switch
+        {
+            Piece.PieceId.Hu => "P",
+            Piece.PieceId.Kyosha => "L",
+            Piece.PieceId.Keima => "N",
+            Piece.PieceId.Gin => "S",
+            Piece.PieceId.Kin => "G",
+            Piece.PieceId.Gyoku => "K",
+            Piece.PieceId.Hisha => "R",
+            Piece.PieceId.Kaku => "B",
+            _ => throw new System.ArgumentException("駒の種類が不明")
+        };
+        
+        char y = (char)('a' + (int)position.y - 1); // y座標を段に変換
+        return $"{pieceChar}*{position.x}{y}";
     }
 }

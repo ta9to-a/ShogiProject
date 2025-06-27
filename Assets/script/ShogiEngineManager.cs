@@ -1,4 +1,4 @@
-/*using UnityEngine;
+using UnityEngine;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -7,9 +7,11 @@ using System.Collections.Generic;
 
 public class ShogiEngineManager : MonoBehaviour
 {
-    private Process engineProcess;
-    private StreamWriter engineStreamWriter;
-    private StreamReader engineStreamReader;
+    private Process _engineProcess;
+    private StreamWriter _engineStreamWriter;
+    private StreamReader _engineStreamReader;
+    
+    [SerializeField] private int aiThinkTimeMs = 3000;
     
     public ShogiManager shogiManager;
 
@@ -32,9 +34,8 @@ public class ShogiEngineManager : MonoBehaviour
             CreateNoWindow = true // ウィンドウを表示しない
         };
 
-        engineProcess = new Process { StartInfo = startInfo };
-
-        engineProcess.OutputDataReceived += (sender, args) =>
+        _engineProcess = new Process { StartInfo = startInfo };
+        _engineProcess.OutputDataReceived += (sender, args) =>
         {
             if (args.Data != null)
             {
@@ -50,13 +51,12 @@ public class ShogiEngineManager : MonoBehaviour
                 }
                 else if (engineResponse.StartsWith("bestmove"))
                 {
-                    Debug.Log("Engine > " + engineResponse);
                     ParseBestMove(engineResponse);
                 }
             }
         };
         
-        engineProcess.ErrorDataReceived += (sender, args) =>
+        _engineProcess.ErrorDataReceived += (sender, args) =>
         {
             if (args.Data != null)
             {
@@ -65,17 +65,17 @@ public class ShogiEngineManager : MonoBehaviour
         };
 
         // やねうら王の使用を開始
-        engineProcess.Start();
+        _engineProcess.Start();
         
-        engineProcess.BeginOutputReadLine(); // 通常時
-        engineProcess.BeginErrorReadLine(); // エラー出力を読み取る
+        _engineProcess.BeginOutputReadLine(); // 通常時
+        _engineProcess.BeginErrorReadLine(); // エラー出力を読み取る
 
-        engineStreamWriter = engineProcess.StandardInput;
+        _engineStreamWriter = _engineProcess.StandardInput;
 
         InitializeEngine();
     }
 
-    // エンジンの使用を開始する
+    //-----エンジンの使用を開始する-----
     async void InitializeEngine()
     {
         SendCommand("usi");
@@ -83,29 +83,29 @@ public class ShogiEngineManager : MonoBehaviour
         SendCommand("isready");
     }
 
-    // エンジンにコマンドを送信する
+    //-----エンジンを終了する-----
+    void OnApplicationQuit()
+    {
+        if (_engineProcess != null && !_engineProcess.HasExited)
+        {
+            SendCommand("quit");
+            _engineProcess.WaitForExit(1000);
+            _engineProcess.Close();
+        }
+    }
+    
+    //-----エンジンにコマンドを送信する-----
     public void SendCommand(string command)
     {
-        if (engineProcess != null && !engineProcess.HasExited && engineStreamWriter != null)
+        if (_engineProcess != null && !_engineProcess.HasExited && _engineStreamWriter != null)
         {
-            engineStreamWriter.WriteLine(command);
-            engineStreamWriter.Flush();
+            _engineStreamWriter.WriteLine(command);
+            _engineStreamWriter.Flush();
 
             if (command == "usi" || command == "isready")
             {
                 Debug.Log("Client > " + command);
             }
-        }
-    }
-
-    // エンジンを終了する
-    void OnApplicationQuit()
-    {
-        if (engineProcess != null && !engineProcess.HasExited)
-        {
-            SendCommand("quit");
-            engineProcess.WaitForExit(1000);
-            engineProcess.Close();
         }
     }
     
@@ -118,42 +118,47 @@ public class ShogiEngineManager : MonoBehaviour
         SendCommand("position startpos");
     }
     
-    public void StartThinking(int thinkTimeMs = 1000)
+    public void StartThinking(int thinkTimeMs = -1)
     {
-        SendCommand($"go byoyomi {thinkTimeMs}");
+        int actualThinkTime = (thinkTimeMs == -1) ? aiThinkTimeMs : thinkTimeMs;
+        SendCommand($"go byoyomi {actualThinkTime}");
     }
 
     // AIの最善手を解析する
     void ParseBestMove(string response)
     {
+        Debug.Log("Engine > " + response);
         string[] parts = response.Split(' ');
         if (parts.Length > 1)
         {
             string bestMove = parts[1];
-            Debug.Log($"{bestMove}");
             
+            string objectTag = ShogiManager.activePlayer? "☗" : "☖";
+            
+            Debug.Log(objectTag + " " + bestMove);
             shogiManager.ReceiveEngineMove(bestMove);
         }
     }
 
-    // ✅ 新しいメソッド：指し手履歴を管理
-    private List<string> moveHistory = new List<string>();
+    //指し手履歴を管理
+    List<string> _moveHistory = new ();
 
     public void AddMoveToHistory(string move)
     {
-        moveHistory.Add(move);
-        Debug.Log($"📝 Move history: {string.Join(" ", moveHistory)}");
+        _moveHistory.Add(move);
     }
 
     public void RequestBestMoveWithHistory()
     {
         string positionCommand = "position startpos";
-        if (moveHistory.Count > 0)
+        if (_moveHistory.Count > 0)
         {
-            positionCommand += " moves " + string.Join(" ", moveHistory);
+            positionCommand += " moves " + string.Join(" ", _moveHistory);
         }
     
         SendCommand(positionCommand);
-        SendCommand("go byoyomi 1000");
+        SendCommand("go byoyomi " + aiThinkTimeMs);
+       
+        Debug.Log("positionCommand :" + positionCommand);
     }
-}*/
+}

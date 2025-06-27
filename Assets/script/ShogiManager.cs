@@ -14,7 +14,7 @@ public class ShogiManager : MonoBehaviour
     public static Piece CurrentSelectedPiece;        // 選択中の駒
 
     // ゲーム進行・状態管理
-    public bool activePlayer; // 現在のターン（true:先手, false:後手）
+    public static bool activePlayer; // 現在のターン（true:先手, false:後手）
 
     // 二歩チェック用の歩の列情報
     public bool[] senteFuPosition = new bool[9]; // 先手の歩の列状態
@@ -42,7 +42,8 @@ public class ShogiManager : MonoBehaviour
     private Camera _camera;
 
     Piece _piece;
-    // [SerializeField] ShogiEngineManager shogiEngineManager;
+    [SerializeField] HeldPieceManager heldPieceManager; // 持ち駒管理
+    [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
 
     void Awake()
     {
@@ -55,7 +56,15 @@ public class ShogiManager : MonoBehaviour
         
         Instance = this;
     }
-    
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.P))
+        {
+            Debug.Log($"{activePlayer}.{CanSelect}");
+        }
+    }
+
     void Start()
     {
         buttons.SetActive(false);
@@ -65,21 +74,23 @@ public class ShogiManager : MonoBehaviour
         trueButton.onClick.AddListener(() => Choose(true));
         falseButton.onClick.AddListener(() => Choose(false));
         
-        // 全ての駒の配置
-        CreatePieces(Piece.PieceId.Hu,9,new [] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 7, 3, "歩兵");
-        CreatePieces(Piece.PieceId.Keima,2,new [] { 2, 8 }, 9, 1, "桂馬");
-        CreatePieces(Piece.PieceId.Gin, 2, new [] { 3, 7 }, 9, 1, "銀将");
-        CreatePieces(Piece.PieceId.Kin, 2,new [] { 4, 6 }, 9, 1, "金将");
-        CreatePieces(Piece.PieceId.Kyosha, 2,new [] { 1, 9 }, 9, 1, "香車");
-        CreatePieces(Piece.PieceId.Gyoku, 1,new [] { 5, 5 }, 9, 1, "玉将");
+        // 駒の配置
+        CreatePieces(Piece.PieceId.Hu, 9, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 7, 3, "歩兵");
+        CreatePieces(Piece.PieceId.Keima, 2, new[] { 2, 8 }, 9, 1, "桂馬");
+        CreatePieces(Piece.PieceId.Gin, 2, new[] { 3, 7 }, 9, 1, "銀将");
+        CreatePieces(Piece.PieceId.Kin, 2, new[] { 4, 6 }, 9, 1, "金将");
+        CreatePieces(Piece.PieceId.Kyosha, 2, new[] { 1, 9 }, 9, 1, "香車");
+        CreatePieces(Piece.PieceId.Gyoku, 1, new[] { 5 }, 9, 1, "玉将");
         CreateDiagonalPieces(Piece.PieceId.Kaku, 8, 8, 2, 2, "角");
         CreateDiagonalPieces(Piece.PieceId.Hisha, 2, 8, 8, 2, "飛車");
+
+        shogiEngMan.SetStartPosition();
     }
     
     //----------------------------------
     //------------駒の初期配置------------
     //----------------------------------
-    void CreatePieces(Piece.PieceId pieceType,int loopCount, int[] posX, int sentePosY, int gotePosY, string pieceName)
+    void CreatePieces(Piece.PieceId pieceType, int loopCount, int[] posX, int sentePosY, int gotePosY, string pieceName)
     {
         Sprite defaultSprite = defaultSprites[(int)pieceType];
         Sprite promotedSprite = promotedSprites[(int)pieceType];
@@ -88,68 +99,53 @@ public class ShogiManager : MonoBehaviour
         {
             int x = posX[i];
         
-            // 先手の駒
-            GameObject sentePiece = Instantiate(piecePrefab, new Vector2(x, sentePosY), Quaternion.identity);
-            Piece sentePieceScript = sentePiece.GetComponent<Piece>();
-            
-            // 先手の駒の詳細設定
-            sentePiece.tag = "Sente";
-            sentePieceScript.ApplyStatePiece(pieceType);
-            sentePieceScript.defaultSprite = defaultSprite;
-            sentePieceScript.promotedSprite = promotedSprite;
-            if (pieceType == Piece.PieceId.Hu)
-            {
-                senteFuPosition[x - 1] = true;
-            }
-            
-            sentePiece.name = $"先手:{pieceName}.{i + 1}";
+            // 先手の駒を作成
+            CreateSinglePiece(pieceType, x, sentePosY, "Sente", $"先手:{pieceName}.{i + 1}", 
+                defaultSprite, promotedSprite, x - 1, true);
         
-            // 後手の駒
-            GameObject gotePiece = Instantiate(piecePrefab, new Vector2(x, gotePosY), Quaternion.identity);
-            Piece gotePieceScript = gotePiece.GetComponent<Piece>();
-            
-            // 後手の駒の詳細設定
-            gotePiece.tag = "Gote";
-            gotePieceScript.ApplyStatePiece(pieceType);
-            gotePieceScript.defaultSprite = defaultSprite;
-            gotePieceScript.promotedSprite = promotedSprite;
-            if (pieceType == Piece.PieceId.Hu)
-            {
-                goteFuPosition[x - 1] = true;
-            }
-            
-            gotePiece.name = $"後手:{pieceName}.{i + 1}";
-            
+            // 後手の駒を作成
+            CreateSinglePiece(pieceType, x, gotePosY, "Gote", $"後手:{pieceName}.{i + 1}", 
+                defaultSprite, promotedSprite, x - 1, false);
         }
     }
+    
     void CreateDiagonalPieces(Piece.PieceId pieceType, int senteX, int senteY, int goteX, int goteY, string pieceName)
     {
         Sprite defaultSprite = defaultSprites[(int)pieceType];
         Sprite promotedSprite = promotedSprites[(int)pieceType];
-        
-        // 先手の駒
-        GameObject sentePiece = Instantiate(piecePrefab, new Vector2(senteX, senteY), Quaternion.identity);
-        Piece sentePieceScript = sentePiece.GetComponent<Piece>();
-            
-        // 先手の駒の詳細設定
-        sentePiece.tag = "Sente";
-        sentePieceScript.ApplyStatePiece(pieceType);
-        sentePieceScript.defaultSprite = defaultSprite;
-        sentePieceScript.promotedSprite = promotedSprite;
-            
-        sentePiece.name = $"先手:{pieceName}.1";
-        
-        // 後手の駒
-        GameObject gotePiece = Instantiate(piecePrefab, new Vector2(goteX, goteY), Quaternion.identity);
-        Piece gotePieceScript = gotePiece.GetComponent<Piece>();
-            
-        // 後手の駒の詳細設定
-        gotePiece.tag = "Gote";
-        gotePieceScript.ApplyStatePiece(pieceType);
-        gotePieceScript.defaultSprite = defaultSprite;
-        gotePieceScript.promotedSprite = promotedSprite;
-            
-        gotePiece.name = $"後手:{pieceName}.1";
+    
+        // 先手の駒を作成
+        CreateSinglePiece(pieceType, senteX, senteY, "Sente", $"先手:{pieceName}.1", 
+            defaultSprite, promotedSprite, -1, true);
+    
+        // 後手の駒を作成
+        CreateSinglePiece(pieceType, goteX, goteY, "Gote", $"後手:{pieceName}.1", 
+            defaultSprite, promotedSprite, -1, false);
+    }
+    
+    // -----駒の設置-----
+    void CreateSinglePiece(Piece.PieceId pieceType, int posX, int posY, string tag, string pieceName, 
+        Sprite defaultSprite, Sprite promotedSprite, int fuPositionIndex, bool isSente)
+    {
+        // 駒の
+        GameObject piece = Instantiate(piecePrefab, new Vector2(posX, posY), Quaternion.identity);
+        Piece pieceScript = piece.GetComponent<Piece>();
+    
+        // 駒の基本設定
+        piece.tag = tag;
+        piece.name = pieceName;
+        pieceScript.ApplyStatePiece(pieceType);
+        pieceScript.defaultSprite = defaultSprite;
+        pieceScript.promotedSprite = promotedSprite;
+    
+        // 歩兵の場合は位置情報を記録（fuPositionIndex が -1 でない場合のみ）
+        if (pieceType == Piece.PieceId.Hu && fuPositionIndex >= 0)
+        {
+            if (isSente)
+                senteFuPosition[fuPositionIndex] = true;
+            else
+                goteFuPosition[fuPositionIndex] = true;
+        }
     }
     
     //----------------------------------
@@ -211,63 +207,42 @@ public class ShogiManager : MonoBehaviour
     //----------------------------------
     //-----------AI専用処理--------------
     //----------------------------------
-    // 文字列から移動情報を解析する
-    /*(int fromX, int fromY, int toX, int toY)? ParseMoveString(string moveString)
-    {
-        //　文字列チェック
-        if (moveString.Length < 4)
-        {
-            Debug.LogWarning($"Invalid move format: {moveString}");
-            return null;
-        }
-        
-        // 駒の種類を取得
-        int shogiFromX = int.Parse(moveString[0].ToString());
-        char fromYChar = moveString[1];
-        int shogiToX = int.Parse(moveString[2].ToString());
-        char toYChar = moveString[3];
-        
-        int fromX = 10 - shogiFromX; // 1→9, 2→8, ..., 9→1
-        int toX = 10 - shogiToX;
-        
-        // 文字を数字に変換
-        int fromY = fromYChar - 'a' + 1; // a→1, b→2, ..., i→9
-        int toY = toYChar - 'a' + 1;
-    
-        Debug.Log($"🔄 Convert: {moveString} → 将棋({shogiFromX},{fromYChar}) → Unity({fromX},{fromY}) to Unity({toX},{toY})");
-        return (fromX, fromY, toX, toY);
-    }
     
     // エンジンからの移動情報を受信する
-    public void ReceiveEngineMove(string moveString)
+    public async void ReceiveEngineMove(string moveString)
     {
-        var moveData = ParseMoveString(moveString);
-        if (moveData != null)
+        if (moveString[1].ToString() == "*") // 持ち駒の場合の処理
         {
-            Debug.Log($"📍 Engine move: ({moveData.Value.fromX},{moveData.Value.fromY}) → ({moveData.Value.toX},{moveData.Value.toY})");
-            
-            ExecuteEngineMoveAsync(
-                moveData.Value.fromX, moveData.Value.fromY, 
-                moveData.Value.toX, moveData.Value.toY).Forget();
+            Debug.Log("持ち駒の移動を処理します: " + moveString);
+        }
+        else if (moveString.Length > 4　&& moveString[5].ToString() == "+") // 成駒の場合の処理
+        {
+            Debug.Log("成駒の処理をします: " + moveString);
+        }
+        else // 通常の移動の場合
+        {
+            var moveData = await ParseMoveStringAsync(moveString);
+
+            if (moveData != null)
+            {
+                var data = moveData.Value;
+                await ExecuteEngineMoveAsync(data.startIndex, data.endIndex, data.toX, data.toY);
+            }
         }
     }
     
-    private async UniTaskVoid ExecuteEngineMoveAsync(int fromX, int fromY, int toX, int toY)
+    private async UniTask ExecuteEngineMoveAsync(int fromX, int fromY, int toX, int toY)
     {
         // メインスレッドに切り替え
         await UniTask.SwitchToMainThread();
         ExecuteEngineMove(fromX, fromY, toX, toY);
     }
-
+    
     void ExecuteEngineMove(int fromX, int fromY, int toX, int toY)
     {
-        // ✅ 1行だけの簡潔ログ
-        Debug.Log($"🎯 Turn: {(activePlayer ? "先手" : "後手")} | Engine trying: ({fromX},{fromY})→({toX},{toY})");
-    
         // AI手番チェック
         if (activePlayer)
         {
-            Debug.LogWarning($"❌ Wrong turn! Current: 先手, but AI(後手) is trying to move");
             return;
         }
     
@@ -284,8 +259,6 @@ public class ShogiManager : MonoBehaviour
                 string expectedTag = "Gote";
                 string actualTag = fromPieceCollider.gameObject.tag;
             
-                Debug.Log($"🔍 Piece check: Expected={expectedTag}, Actual={actualTag}");
-            
                 if (actualTag != expectedTag)
                 {
                     Debug.LogError($"❌ Wrong piece! AI trying to move {actualTag} piece, but should move {expectedTag}");
@@ -297,8 +270,7 @@ public class ShogiManager : MonoBehaviour
                 
                 // ✅ AIの手を記譜法に変換して履歴に追加
                 string aiMoveNotation = ConvertToShogiNotation(fromPosition, toPosition);
-                Debug.Log($"🤖 AI move: {aiMoveNotation}");
-            
+                
                 ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
                 if (engineManager != null)
                 {
@@ -306,7 +278,6 @@ public class ShogiManager : MonoBehaviour
                 }
                 
                 activePlayer = !activePlayer;
-                Debug.Log($"✅ Move OK");
             }
         }
         else
@@ -315,21 +286,84 @@ public class ShogiManager : MonoBehaviour
         }
     }
     
-    string ConvertToShogiNotation(Vector2 fromPos, Vector2 toPos)
+    //---------駒形式の変換------------
+    // aiの移動形式の変換
+    async UniTask<(int startIndex, int endIndex, int toX, int toY)?> ParseMoveStringAsync(string moveString)
     {
-        // Unity座標 → 将棋座標
-        int shogiFromX = 10 - (int)fromPos.x;
-        int shogiToX = 10 - (int)toPos.x;
+        //　文字列チェック
+        if (moveString.Length < 4)
+        {
+            Debug.LogWarning($"フォーマットが違います: {moveString}");
+            return null;
+        }
+        
+        /*if (moveString[1].ToString() == "*") // 持ち駒の場合の処理
+        {
+            await UniTask.SwitchToMainThread();
+            char pieceChar = moveString[0]; // 駒の種類を取得
+            switch (pieceChar)
+            {
+                case 'P': 
+                    Debug.Log($"持ち駒: hu.{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Hu, activePlayer);
+                    return (0, 0, int.Parse(moveString[2].ToString()), moveString[3] - 'a' + 1); // 歩兵
+                case 'N':
+                    Debug.Log($"持ち駒: keima{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Keima, activePlayer);
+                    return (0, 0, 0, 0); // 桂馬
+                case 'S':
+                    Debug.Log($"持ち駒: gin{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Gin, activePlayer);
+                    return (0, 0, 0, 0); // 銀将
+                case 'G':Debug.Log($"持ち駒: kin{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Kin, activePlayer);
+                    return (0, 0, 0, 0); // 金将
+                case 'K':Debug.Log($"持ち駒: gyoku{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Gyoku, activePlayer);
+                    return (0, 0, 0, 0); // 玉将
+                case 'L':Debug.Log($"持ち駒: kyosha{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Kyosha, activePlayer);
+                    return (0, 0, 0, 0); // 香車
+                case 'R':Debug.Log($"持ち駒: hisha{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Hisha, activePlayer);
+                    return (0, 0, 0, 0); // 飛車
+                case 'B':Debug.Log($"持ち駒: kaku{activePlayer}");
+                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Kaku, activePlayer);
+                    return (0, 0, 0, 0); // 角
+                default:
+                    Debug.LogWarning($"不明な持ち駒: {pieceChar}");
+                    return null;
+            }
+        }*/
+        /*if (moveString[4].ToString() == "+") // 成駒の場合の処理
+        {
+            Debug.LogWarning("成駒");
+        }*/
+        
+        // 駒の種類を取得
+        int shogiFromX = int.Parse(moveString[0].ToString());
+        char fromYChar = moveString[1];
+        int shogiToX = int.Parse(moveString[2].ToString());
+        char toYChar = moveString[3];
+        
+        // Debug.Log(moveString);
+        
+        // 文字を数字に変換
+        int fromY = fromYChar - 'a' + 1;
+        int toY = toYChar - 'a' + 1;
+        return (shogiFromX, fromY, shogiToX, toY);
+    }
     
+    // *aiの移動形式の変換
+    public string ConvertToShogiNotation(Vector2 fromPos, Vector2 toPos)
+    {
         char fromYChar = (char)('a' + (int)fromPos.y - 1);
         char toYChar = (char)('a' + (int)toPos.y - 1);
     
-        string notation = $"{shogiFromX}{fromYChar}{shogiToX}{toYChar}";
-    
-        Debug.Log($"🔄 AI move Unity({fromPos.x},{fromPos.y}) → 将棋({shogiFromX},{fromYChar}) = {notation}");
+        string notation = $"{fromPos.x}{fromYChar}{toPos.x}{toYChar}";
     
         return notation;
-    }*/
+    }
     
     //----------------------------------
     //---------ハイライトの管理------------
@@ -462,7 +496,7 @@ public class ShogiManager : MonoBehaviour
         buttons.SetActive(false);
     }
     
-    public IEnumerator WaitForPlayerChoice(int pieceType, Vector3 pos, Action<bool> onComplete)
+    public async UniTask<bool> WaitForPlayerChoiceAsync(int pieceType, Vector3 pos)
     {
         //　選択画面を表示
         buttons.SetActive(true);
@@ -493,12 +527,12 @@ public class ShogiManager : MonoBehaviour
         rectTransform.anchoredPosition = localPoint;
         rectTransform.rotation = activePlayer ? Quaternion.Euler(0f, 0f, 0f) : Quaternion.Euler(0f, 0f, 180f);
     
-        buttons.SetActive(true);
         _playerChoice = null;
     
-        yield return new WaitUntil(() => _playerChoice.HasValue);
+        await UniTask.WaitUntil(() => _playerChoice.HasValue);
     
-        onComplete?.Invoke(_playerChoice != null && _playerChoice.Value);
+        // 選択結果を返す
+        return _playerChoice.Value;
     }
 }
 

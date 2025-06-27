@@ -14,7 +14,8 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     bool _isHeldPiece; // 持ち駒として選択されているか
     int _lastHuPositionY; // 二歩防止用に座標を保存
     public int moveDirection; // 先手なら+1、後手なら-1
-    bool _leftEnemyCampThisTurn; //成駒選択が可能済の駒か
+    bool _leftEnemyCampThisTurn; // 成駒選択が可能済の駒か
+    bool isFastPromote; // 初期の成駒状況
 
     //【操作範囲・制限関連】
     Vector2 _mouseMinPos = new(0.5f, 0.5f); // マウス選択の座標の下限値
@@ -48,6 +49,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     }
     
     [SerializeField] public PieceId pieceType; // 駒の種類
+    
     //-------駒のタイプ設定-------
     public void ApplyStatePiece(PieceId type)
     {
@@ -75,6 +77,8 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
         _renderer = GetComponent<SpriteRenderer>();
         _renderer.sprite = defaultSprite;
+
+        isFastPromote = false;
     }
 
     //-----駒のクリックを検知-----
@@ -104,8 +108,8 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 }
             }
 
-            if (_shogiManager.activePlayer && gameObject.CompareTag("Sente") ||
-                !_shogiManager.activePlayer && gameObject.CompareTag("Gote"))
+            if (ShogiManager.activePlayer && gameObject.CompareTag("Sente") ||
+                !ShogiManager.activePlayer && gameObject.CompareTag("Gote"))
             {
                 // 現在のターンを確認
                 if (!isSelect)
@@ -128,7 +132,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     }
 
     // playerの選択状態でのクリック処理
-    public void OnBoardClick()
+    public async void OnBoardClick()
     {
         if (Camera.main != null)
         {
@@ -223,11 +227,6 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                         // 成駒選択のUIを表示
                         switch (pieceType)
                         {
-                            // 成れない駒の処理
-                            case PieceId.Kin:
-                            case PieceId.Gyoku:
-                                return;
-                            
                             case PieceId.Hu:
                             case PieceId.Kyosha:
                                 if (_shogiPositionY <= 1 && gameObject.CompareTag("Sente") ||
@@ -235,7 +234,6 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                                 {
                                     // 強制的に成る
                                     ForcePromote(intMousePos);
-                                    return;
                                 }
                                 break;
         
@@ -245,37 +243,45 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                                 {
                                     // 強制的に成る
                                     ForcePromote(intMousePos);
-                                    return;
                                 }
                                 break;
                         }
                         
+                        bool promote = await _shogiManager.WaitForPlayerChoiceAsync((int)pieceType, transform.position);
+                        HandlePromotionChoice(promote, pieceType, intMousePos);
                         
-                        StartCoroutine(_shogiManager.WaitForPlayerChoice(
-                            (int)pieceType,
-                            transform.position,
-                            promote => HandlePromotionChoice(promote, pieceType, intMousePos)
-                        ));
+                        Debug.Log("isFastPromote " + isFastPromote);
+                        ShogiManager.CurrentSelectedPiece = null;
+                        //return;
                     }
                 }
-                string moveNotation = ConvertToShogiNotation(fromPosition, intMousePos);
-                Debug.Log($"📝 Player move: {moveNotation}");
+                // 駒の形式変換
+                string moveNotation = _shogiManager.ConvertToShogiNotation(fromPosition, intMousePos);
+                if (isFastPromote)
+                {
+                    moveNotation += "+";
+                    isFastPromote = false; // 一度だけ成駒にする
+                }
                 
-                /*ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
+                string objectTag = gameObject.CompareTag("Sente") ? "☗" : "☖";
+                Debug.Log(objectTag + " " + moveNotation);
+                
+                ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
                 if (engineManager != null)
                 {
                     engineManager.AddMoveToHistory(moveNotation);
-                }*/
+                }
                 
-                _shogiManager.activePlayer = !_shogiManager.activePlayer; // ターンを切り替える
-                /*if (!_shogiManager.activePlayer) // 後手（AI）のターン
+                ShogiManager.activePlayer = !ShogiManager.activePlayer; // ターンを切り替える
+                
+                if (!ShogiManager.activePlayer) // 後手（AI）のターン
                 {
                     if (engineManager != null)
                     {
-                        Debug.Log("🤖 AI turn - requesting the best move");
+                        // AIに最善手を要求
                         engineManager.RequestBestMoveWithHistory();
                     }
-                }*/
+                }
                 ShogiManager.CurrentSelectedPiece = null;
             }
             else
@@ -297,6 +303,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
             _isPromote = true;
             _leftEnemyCampThisTurn = false;
             _renderer.sprite = promotedSprite;
+            isFastPromote = true;
 
             if (pieceType == PieceId.Hu)
             {
@@ -319,7 +326,8 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         _isPromote = true;
         _leftEnemyCampThisTurn = false;
         _renderer.sprite = promotedSprite;
-    
+        isFastPromote = true;
+
         // この駒がと金なら、二歩防止リストからこの筋を外す
         if (pieceType == PieceId.Hu)
         {
@@ -329,11 +337,11 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
             targetFuPositions[(int)intMousePos.x - 1] = false;
         }
-    
+
         ShogiManager.CanSelect = true;
-        _shogiManager.activePlayer = !_shogiManager.activePlayer;
     }
     
+    // AIの持ち駒追加
     public void ExecuteAIMove(Vector2 position)
     {
         LayerMask pieceLayer = LayerMask.GetMask("Piece");
@@ -342,27 +350,30 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         if (targetPieceCollider != null)
         {
             GameObject capturedPiece = targetPieceCollider.gameObject;
-            Piece capturedPieceScript = capturedPiece.GetComponent<Piece>();
-            Debug.Log(capturedPieceScript);
+            Piece capturedPieceComponent = capturedPiece.GetComponent<Piece>();
+            if (capturedPieceComponent != null && !capturedPiece.CompareTag(gameObject.tag))
+            {
+                // 持ち駒に追加
+                bool tagIsSente = gameObject.CompareTag("Sente");
+                _heldPieceManager.AddHeldPiece(capturedPiece, capturedPieceComponent.pieceType, tagIsSente);
+                
+                // 駒の状態をリセット
+                capturedPieceComponent._isPromote = false;
+                capturedPieceComponent._isPromote = false;
+                capturedPieceComponent._renderer.sprite = capturedPieceComponent.defaultSprite;
+                capturedPieceComponent._leftEnemyCampThisTurn = false;
+
+                if (capturedPieceComponent.pieceType == PieceId.Hu)
+                {
+                    bool[] targetFuPositions = !tagIsSente
+                        ? _shogiManager.senteFuPosition
+                        : _shogiManager.goteFuPosition;
+                    targetFuPositions[(int)position.x - 1] = false;
+                }
+            }
         }
         
         MovePiece(position);
-    }
-    
-    string ConvertToShogiNotation(Vector2 fromPos, Vector2 toPos)
-    {
-        // Unity座標 → 将棋座標
-        int shogiFromX = 10 - (int)fromPos.x; // Unity x=1→将棋9筋, x=9→将棋1筋
-        int shogiToX = 10 - (int)toPos.x;
-    
-        char fromYChar = (char)('a' + (int)fromPos.y - 1); // Unity y=1→将棋a段, y=9→将棋i段
-        char toYChar = (char)('a' + (int)toPos.y - 1);
-    
-        string notation = $"{shogiFromX}{fromYChar}{shogiToX}{toYChar}";
-    
-        Debug.Log($"🔄 Unity({fromPos.x},{fromPos.y}) → 将棋({shogiFromX},{fromYChar}) = {notation}");
-    
-        return notation;
     }
     
     // 移動処理(player or AI)
@@ -463,8 +474,8 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         // ハイライト表示
         _shogiManager.CreateMoveHighlightSquares(canMovePositions, position);
     }
-
-    void CheckLinearPaths(Vector2 startPosition, Vector2[] directions)
+    
+    void CheckLinearPaths(Vector2 startPosition, Vector2[] directions) // 直線的な移動
     {
         foreach (var direction in directions)
         {
