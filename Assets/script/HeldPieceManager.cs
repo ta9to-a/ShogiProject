@@ -130,12 +130,12 @@ public class HeldPieceManager : MonoBehaviour
                     }
                     break;
                 case Piece.PieceId.Keima:
-                    if (intMousePos.x <= 2 && foundPiece.CompareTag("Sente"))
+                    if (intMousePos.y <= 2 && foundPiece.CompareTag("Sente"))
                     {
                         _shogiManager.ClearHeldPieceSelection();
                         return;
                     }
-                    else if (intMousePos.x >= 8 && foundPiece.CompareTag("Gote"))
+                    else if (intMousePos.y >= 8 && foundPiece.CompareTag("Gote"))
                     {
                         _shogiManager.ClearHeldPieceSelection();
                         return;
@@ -144,12 +144,12 @@ public class HeldPieceManager : MonoBehaviour
             }
 
             // 駒をマウスの位置に移動
-            foundPiece.transform.position = intMousePos; // マウスの位置に駒を移動
+            foundPiece.transform.position = intMousePos;
             foundPiece.SetActive(true);
             
             // 持ち駒リストから削除
             bool capturerIsSente = foundPiece.CompareTag("Sente");
-            if (capturerIsSente) senteInactivePieces.Remove(foundPiece);   // 先手の持ち駒リストに追加
+            if (capturerIsSente) senteInactivePieces.Remove(foundPiece);
             else goteInactivePieces.Remove(foundPiece); 
             
             // その駒の種類の持ち駒数を減らす
@@ -157,22 +157,25 @@ public class HeldPieceManager : MonoBehaviour
             if (capturerIsSente) senteHeldPieceType[pieceTypeIndex]--;
             else goteHeldPieceType[pieceTypeIndex]--;
             
+            // 選択状態を解除
             IsHeldPieceSelected = false;
             FoundPiece = null;
 
             _shogiManager.ClearHighlights();
 
             string moveNotation = GenerateDropNotation(pieceType, intMousePos);
-
+            string objectTag = ShogiManager.ActivePlayer ? "☗" : "☖";
+            Debug.Log(objectTag + " " + moveNotation);
+            
             ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
             if (engineManager != null)
             {
                 engineManager.AddMoveToHistory(moveNotation);
             }
 
-            ShogiManager.activePlayer = !ShogiManager.activePlayer;
+            ShogiManager.ActivePlayer = !ShogiManager.ActivePlayer;
 
-            if (!ShogiManager.activePlayer) // 後手（AI）のターン
+            if (!ShogiManager.ActivePlayer) // 後手（AI）のターン
             {
                 if (engineManager != null)
                 {

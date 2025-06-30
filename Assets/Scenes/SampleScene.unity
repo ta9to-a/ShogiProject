@@ -908,7 +908,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62379250ab32e4de9ab5ec3b20a0416e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activePlayer: 0
   senteFuPosition: 000000000000000000
   goteFuPosition: 000000000000000000
   piecePrefab: {fileID: 1325773901996367245, guid: 6f2bb57fe31654482997cec4a953ebb7, type: 3}
@@ -934,6 +933,7 @@ MonoBehaviour:
   buttons: {fileID: 1870663183}
   trueButton: {fileID: 818408945}
   falseButton: {fileID: 558494462}
+  heldPieceManager: {fileID: 1760238228}
   shogiEngMan: {fileID: 2040609622}
 --- !u!61 &2035514906
 BoxCollider2D:

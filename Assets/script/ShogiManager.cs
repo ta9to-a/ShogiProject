@@ -11,10 +11,10 @@ public class ShogiManager : MonoBehaviour
     public static ShogiManager Instance { get; private set; }
 
     // 現在選択されている駒（グローバル）
-    public static Piece CurrentSelectedPiece;        // 選択中の駒
+    public static Piece CurrentSelectedPiece; // 選択中の駒
 
     // ゲーム進行・状態管理
-    public static bool activePlayer; // 現在のターン（true:先手, false:後手）
+    public static bool ActivePlayer; // 現在のターン（true:先手, false:後手）
 
     // 二歩チェック用の歩の列情報
     public bool[] senteFuPosition = new bool[9]; // 先手の歩の列状態
@@ -45,6 +45,8 @@ public class ShogiManager : MonoBehaviour
     [SerializeField] HeldPieceManager heldPieceManager; // 持ち駒管理
     [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
 
+    bool isFastPromote; // 成駒の選択がされているか
+
     void Awake()
     {
         _camera = Camera.main;
@@ -61,15 +63,16 @@ public class ShogiManager : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.P))
         {
-            Debug.Log($"{activePlayer}.{CanSelect}");
+            Debug.Log($"{ActivePlayer}.{CanSelect}");
         }
     }
 
     void Start()
     {
         buttons.SetActive(false);
-        activePlayer = true;
+        ActivePlayer = true;
         CanSelect = true; // 初期状態では選択可能
+        isFastPromote = false;
         
         trueButton.onClick.AddListener(() => Choose(true));
         falseButton.onClick.AddListener(() => Choose(false));
@@ -215,10 +218,6 @@ public class ShogiManager : MonoBehaviour
         {
             Debug.Log("持ち駒の移動を処理します: " + moveString);
         }
-        else if (moveString.Length > 4　&& moveString[5].ToString() == "+") // 成駒の場合の処理
-        {
-            Debug.Log("成駒の処理をします: " + moveString);
-        }
         else // 通常の移動の場合
         {
             var moveData = await ParseMoveStringAsync(moveString);
@@ -241,7 +240,7 @@ public class ShogiManager : MonoBehaviour
     void ExecuteEngineMove(int fromX, int fromY, int toX, int toY)
     {
         // AI手番チェック
-        if (activePlayer)
+        if (ActivePlayer)
         {
             return;
         }
@@ -266,7 +265,7 @@ public class ShogiManager : MonoBehaviour
                 }
                 
                 Vector2 toPosition = new Vector2(toX, toY);
-                movingPiece.ExecuteAIMove(toPosition);
+                movingPiece.ExecuteAIMove(toPosition, isFastPromote);
                 
                 // ✅ AIの手を記譜法に変換して履歴に追加
                 string aiMoveNotation = ConvertToShogiNotation(fromPosition, toPosition);
@@ -276,8 +275,9 @@ public class ShogiManager : MonoBehaviour
                 {
                     engineManager.AddMoveToHistory(aiMoveNotation);
                 }
-                
-                activePlayer = !activePlayer;
+
+                isFastPromote = false;
+                ActivePlayer = !ActivePlayer;
             }
         }
         else
@@ -335,10 +335,10 @@ public class ShogiManager : MonoBehaviour
                     return null;
             }
         }*/
-        /*if (moveString[4].ToString() == "+") // 成駒の場合の処理
+        if (moveString.Length == 5 && moveString[4].ToString() == "+") // 成駒の場合の処理
         {
-            Debug.LogWarning("成駒");
-        }*/
+            isFastPromote = true;
+        }
         
         // 駒の種類を取得
         int shogiFromX = int.Parse(moveString[0].ToString());
@@ -361,6 +361,11 @@ public class ShogiManager : MonoBehaviour
         char toYChar = (char)('a' + (int)toPos.y - 1);
     
         string notation = $"{fromPos.x}{fromYChar}{toPos.x}{toYChar}";
+
+        if (isFastPromote)
+        {
+            notation += "+";
+        }
     
         return notation;
     }
@@ -402,7 +407,7 @@ public class ShogiManager : MonoBehaviour
                 }
                 else if (canMovePositions.Contains(highlightPosition) && nowCheckedPiece != null)
                 {
-                    string currentTurnTag = activePlayer ? "Sente" : "Gote";
+                    string currentTurnTag = ActivePlayer ? "Sente" : "Gote";
                     
                     if (nowCheckedPiece.CompareTag(currentTurnTag))
                     {
@@ -419,7 +424,7 @@ public class ShogiManager : MonoBehaviour
         {
             if (pieceType == Piece.PieceId.Hu)
             {
-                bool fuPositionCheck = activePlayer ? senteFuPosition[x - 1] : goteFuPosition[x - 1];
+                bool fuPositionCheck = ActivePlayer ? senteFuPosition[x - 1] : goteFuPosition[x - 1];
                 if (fuPositionCheck)
                 {
                     // その列（x座標）の全マスを設置不可としてハイライト
@@ -467,10 +472,10 @@ public class ShogiManager : MonoBehaviour
         {
             case Piece.PieceId.Hu:    // 歩兵
             case Piece.PieceId.Kyosha: // 香車
-                return activePlayer ? y > 1 : y < 9;
+                return ActivePlayer ? y > 1 : y < 9;
             
             case Piece.PieceId.Keima:  // 桂馬
-                return activePlayer ? y > 2 : y < 8;
+                return ActivePlayer ? y > 2 : y < 8;
             
             default:
                 return true;
@@ -525,7 +530,7 @@ public class ShogiManager : MonoBehaviour
     
         // RectTransformの位置を設定
         rectTransform.anchoredPosition = localPoint;
-        rectTransform.rotation = activePlayer ? Quaternion.Euler(0f, 0f, 0f) : Quaternion.Euler(0f, 0f, 180f);
+        rectTransform.rotation = ActivePlayer ? Quaternion.Euler(0f, 0f, 0f) : Quaternion.Euler(0f, 0f, 180f);
     
         _playerChoice = null;
     

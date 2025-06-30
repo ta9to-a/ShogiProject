@@ -33,7 +33,7 @@ public class HeldPieceData : MonoBehaviour
 
     void OnMouseDown()
     {
-        if (ShogiManager.activePlayer == isSente && ShogiManager.CanSelect && !HeldPieceManager.IsHeldPieceSelected)
+        if (ShogiManager.ActivePlayer == isSente && ShogiManager.CanSelect && !HeldPieceManager.IsHeldPieceSelected)
         {
             _shogiManager.ClearPieceSelection(); //駒の選択をリセット
             HeldPieceManager.SelectedPieceType = pieceType;

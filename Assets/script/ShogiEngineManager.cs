@@ -48,6 +48,7 @@ public class ShogiEngineManager : MonoBehaviour
                 else if (engineResponse == "readyok")
                 {
                     Debug.Log("Engine > " + engineResponse);
+                    ShogiManager.CanSelect = true;
                 }
                 else if (engineResponse.StartsWith("bestmove"))
                 {
@@ -133,7 +134,7 @@ public class ShogiEngineManager : MonoBehaviour
         {
             string bestMove = parts[1];
             
-            string objectTag = ShogiManager.activePlayer? "☗" : "☖";
+            string objectTag = ShogiManager.ActivePlayer? "☗" : "☖";
             
             Debug.Log(objectTag + " " + bestMove);
             shogiManager.ReceiveEngineMove(bestMove);
