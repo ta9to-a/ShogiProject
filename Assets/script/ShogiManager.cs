@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -45,7 +44,7 @@ public class ShogiManager : MonoBehaviour
     [SerializeField] HeldPieceManager heldPieceManager; // 持ち駒管理
     [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
 
-    bool isFastPromote; // 成駒の選択がされているか
+    bool _isFastPromote; // 成駒の選択がされているか
 
     void Awake()
     {
@@ -71,8 +70,8 @@ public class ShogiManager : MonoBehaviour
     {
         buttons.SetActive(false);
         ActivePlayer = true;
-        CanSelect = true; // 初期状態では選択可能
-        isFastPromote = false;
+        CanSelect = false; // 初期状態では選択可能
+        _isFastPromote = false;
         
         trueButton.onClick.AddListener(() => Choose(true));
         falseButton.onClick.AddListener(() => Choose(false));
@@ -144,7 +143,7 @@ public class ShogiManager : MonoBehaviour
         // 歩兵の場合は位置情報を記録（fuPositionIndex が -1 でない場合のみ）
         if (pieceType == Piece.PieceId.Hu && fuPositionIndex >= 0)
         {
-            if (isSente)
+            if (isSente) 
                 senteFuPosition[fuPositionIndex] = true;
             else
                 goteFuPosition[fuPositionIndex] = true;
@@ -180,12 +179,12 @@ public class ShogiManager : MonoBehaviour
         // 持ち駒が選択されている場合は、持ち駒配置処理を実行
         if (HeldPieceManager.FoundPiece != null && HeldPieceManager.IsHeldPieceSelected)
         {
-            HeldPieceManager heldPieceManager = FindObjectOfType<HeldPieceManager>();
-            if (heldPieceManager != null)
+            HeldPieceManager findObjectOfType = FindObjectOfType<HeldPieceManager>();
+            if (findObjectOfType != null)
             {
                 // 持ち駒配置処理を実行
                 Piece.PieceId currentPieceType = HeldPieceManager.SelectedPieceType;
-                heldPieceManager.SelectedHeldPiece(HeldPieceManager.FoundPiece, currentPieceType);
+                findObjectOfType.SelectedHeldPiece(HeldPieceManager.FoundPiece, currentPieceType);
             }
         }
     }
@@ -216,11 +215,12 @@ public class ShogiManager : MonoBehaviour
     {
         if (moveString[1].ToString() == "*") // 持ち駒の場合の処理
         {
-            Debug.Log("持ち駒の移動を処理します: " + moveString);
+            await UniTask.SwitchToMainThread();
+            DropMove(moveString);
         }
         else // 通常の移動の場合
         {
-            var moveData = await ParseMoveStringAsync(moveString);
+            var moveData =  ParseMoveString(moveString);
 
             if (moveData != null)
             {
@@ -265,7 +265,7 @@ public class ShogiManager : MonoBehaviour
                 }
                 
                 Vector2 toPosition = new Vector2(toX, toY);
-                movingPiece.ExecuteAIMove(toPosition, isFastPromote);
+                movingPiece.ExecuteAIMove(toPosition, _isFastPromote);
                 
                 // ✅ AIの手を記譜法に変換して履歴に追加
                 string aiMoveNotation = ConvertToShogiNotation(fromPosition, toPosition);
@@ -276,7 +276,7 @@ public class ShogiManager : MonoBehaviour
                     engineManager.AddMoveToHistory(aiMoveNotation);
                 }
 
-                isFastPromote = false;
+                _isFastPromote = false;
                 ActivePlayer = !ActivePlayer;
             }
         }
@@ -288,7 +288,7 @@ public class ShogiManager : MonoBehaviour
     
     //---------駒形式の変換------------
     // aiの移動形式の変換
-    async UniTask<(int startIndex, int endIndex, int toX, int toY)?> ParseMoveStringAsync(string moveString)
+    (int startIndex, int endIndex, int toX, int toY)? ParseMoveString(string moveString)
     {
         //　文字列チェック
         if (moveString.Length < 4)
@@ -296,48 +296,10 @@ public class ShogiManager : MonoBehaviour
             Debug.LogWarning($"フォーマットが違います: {moveString}");
             return null;
         }
-        
-        /*if (moveString[1].ToString() == "*") // 持ち駒の場合の処理
+        // 成駒のチェック
+        if (moveString.Length == 5 && moveString[4].ToString() == "+")
         {
-            await UniTask.SwitchToMainThread();
-            char pieceChar = moveString[0]; // 駒の種類を取得
-            switch (pieceChar)
-            {
-                case 'P': 
-                    Debug.Log($"持ち駒: hu.{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Hu, activePlayer);
-                    return (0, 0, int.Parse(moveString[2].ToString()), moveString[3] - 'a' + 1); // 歩兵
-                case 'N':
-                    Debug.Log($"持ち駒: keima{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Keima, activePlayer);
-                    return (0, 0, 0, 0); // 桂馬
-                case 'S':
-                    Debug.Log($"持ち駒: gin{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Gin, activePlayer);
-                    return (0, 0, 0, 0); // 銀将
-                case 'G':Debug.Log($"持ち駒: kin{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Kin, activePlayer);
-                    return (0, 0, 0, 0); // 金将
-                case 'K':Debug.Log($"持ち駒: gyoku{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Gyoku, activePlayer);
-                    return (0, 0, 0, 0); // 玉将
-                case 'L':Debug.Log($"持ち駒: kyosha{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Kyosha, activePlayer);
-                    return (0, 0, 0, 0); // 香車
-                case 'R':Debug.Log($"持ち駒: hisha{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Hisha, activePlayer);
-                    return (0, 0, 0, 0); // 飛車
-                case 'B':Debug.Log($"持ち駒: kaku{activePlayer}");
-                    heldPieceManager.RemoveHeldPiece(Piece.PieceId.Kaku, activePlayer);
-                    return (0, 0, 0, 0); // 角
-                default:
-                    Debug.LogWarning($"不明な持ち駒: {pieceChar}");
-                    return null;
-            }
-        }*/
-        if (moveString.Length == 5 && moveString[4].ToString() == "+") // 成駒の場合の処理
-        {
-            isFastPromote = true;
+            _isFastPromote = true;
         }
         
         // 駒の種類を取得
@@ -353,8 +315,74 @@ public class ShogiManager : MonoBehaviour
         int toY = toYChar - 'a' + 1;
         return (shogiFromX, fromY, shogiToX, toY);
     }
+
+    void DropMove(string moveString)
+    {
+        // 持ち駒の処理
+        if (moveString.Length < 4)
+        {
+            Debug.LogWarning($"フォーマットが違います: {moveString}");
+            return;
+        }
+        
+        char pieceChar = moveString[0]; // 駒の種類を取得
+        int toX = int.Parse(moveString[2].ToString());
+        char toYChar = moveString[3];
+        int toY = toYChar - 'a' + 1;
+
+        Piece.PieceId pieceType = pieceChar switch
+        {
+            'P' => Piece.PieceId.Hu,    // 歩兵
+            'N' => Piece.PieceId.Keima, // 桂馬
+            'S' => Piece.PieceId.Gin,   // 銀将
+            'G' => Piece.PieceId.Kin,   // 金将
+            'K' => Piece.PieceId.Gyoku, // 玉将
+            'L' => Piece.PieceId.Kyosha, // 香車
+            'R' => Piece.PieceId.Hisha,  // 飛車
+            'B' => Piece.PieceId.Kaku,   // 角
+            _ => throw new ArgumentException("不明な持ち駒: " + pieceChar)
+        };
+        
+        Debug.Log($"変換後の駒:{pieceType}");
+        
+        heldPieceManager.RemoveHeldPiece(pieceType);
+        if (HeldPieceManager.FoundPiece != null && HeldPieceManager.IsHeldPieceSelected)
+        {
+            Debug.Log("持ち駒を配置します");
+            HeldPieceManager.FoundPiece.transform.position = new Vector2(toX, toY);
+            HeldPieceManager.FoundPiece.SetActive(true);
+
+            Piece pieceScript = HeldPieceManager.FoundPiece.GetComponent<Piece>();
+            pieceScript.ApplyStatePiece(pieceType);
+
+            // 持ち駒リストから削除 & 個数を減らす
+            bool capturerIsSente = HeldPieceManager.FoundPiece.CompareTag("Sente");
+            int pieceTypeIndex = (int)pieceScript.pieceType;
+            if (capturerIsSente)
+            {
+                heldPieceManager.senteInactivePieces.Remove(HeldPieceManager.FoundPiece);
+                heldPieceManager.senteHeldPieceType[pieceTypeIndex]--;
+            }
+            else
+            {
+                heldPieceManager.goteInactivePieces.Remove(HeldPieceManager.FoundPiece);
+                heldPieceManager.goteHeldPieceType[pieceTypeIndex]--;
+            }
+            heldPieceManager.OnHeldPieceChanged?.Invoke();
+
+            HeldPieceManager.IsHeldPieceSelected = false;
+            HeldPieceManager.FoundPiece = null;
+            ActivePlayer = !ActivePlayer;
+
+            ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
+            if (engineManager != null)
+            {
+                engineManager.AddMoveToHistory(moveString);
+            }
+        }
+    }
     
-    // *aiの移動形式の変換
+    // aiの移動形式の変換
     public string ConvertToShogiNotation(Vector2 fromPos, Vector2 toPos)
     {
         char fromYChar = (char)('a' + (int)fromPos.y - 1);
@@ -362,7 +390,7 @@ public class ShogiManager : MonoBehaviour
     
         string notation = $"{fromPos.x}{fromYChar}{toPos.x}{toYChar}";
 
-        if (isFastPromote)
+        if (_isFastPromote)
         {
             notation += "+";
         }
@@ -464,6 +492,7 @@ public class ShogiManager : MonoBehaviour
         }
     }
 
+    // 強制成りの場合
     bool IsValidDropPosition(Piece.PieceId pieceType, Vector2 position)
     {
         int y = (int)position.y;
@@ -482,7 +511,7 @@ public class ShogiManager : MonoBehaviour
         }
     }
 
-    // 駒の選択をクリア
+    // 駒の選択���クリア
     public void ClearHighlights()
     {
         foreach (GameObject highlight in _activeHighlights)
@@ -537,7 +566,6 @@ public class ShogiManager : MonoBehaviour
         await UniTask.WaitUntil(() => _playerChoice.HasValue);
     
         // 選択結果を返す
-        return _playerChoice.Value;
+        return _playerChoice != null && _playerChoice.Value;
     }
 }
-

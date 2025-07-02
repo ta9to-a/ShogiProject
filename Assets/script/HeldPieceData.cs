@@ -37,7 +37,7 @@ public class HeldPieceData : MonoBehaviour
         {
             _shogiManager.ClearPieceSelection(); //駒の選択をリセット
             HeldPieceManager.SelectedPieceType = pieceType;
-            _heldPieceManager.RemoveHeldPiece(pieceType, isSente);
+            _heldPieceManager.RemoveHeldPiece(pieceType);
         }
         else if(HeldPieceManager.IsHeldPieceSelected)
         {

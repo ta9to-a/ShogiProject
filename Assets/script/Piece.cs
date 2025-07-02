@@ -11,12 +11,11 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     int _shogiPositionY; // y現在地
     public bool isSelect; // 駒の選択状態
     bool _isPromote; // 成駒かどうか
-    bool _isHeldPiece; // 持ち駒として選択されているか
-    int _lastHuPositionY; // 二歩防止用に座標を保存
-    public int moveDirection; // 先手なら+1、後手なら-1
     bool _isFastPromote; // 初期の成駒状況
+    public int moveDirection; // 先手なら+1、後手なら-1
+    int _lastHuPositionY; // 二歩防止用に座標を保存
     public bool leftEnemyCampThisTurn; // 成駒選択が可能済の駒か
-    public bool nowInEnemyCamp; // 敵陣にいたかどうか
+    public bool nowInEnemyCamp; // 現在の駒が敵陣にいるかどうか
     public bool wasPromote; // 敵陣にいたかどうか
     
     //【操作範囲・制限関連】
@@ -52,6 +51,20 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     
     [SerializeField] public PieceId pieceType; // 駒の種類
     
+    void Start()
+    {
+        _heldPieceManager = FindObjectOfType<HeldPieceManager>();
+        _shogiManager = FindObjectOfType<ShogiManager>();
+
+        _shogiPositionX = (int)transform.position.x;
+        _shogiPositionY = (int)transform.position.y;
+
+        _renderer = GetComponent<SpriteRenderer>();
+        _renderer.sprite = defaultSprite;
+
+        _isFastPromote = false;
+    }
+    
     //-------駒のタイプ設定-------
     public void ApplyStatePiece(PieceId type)
     {
@@ -68,22 +81,29 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
         pieceType = type;
     }
-
-    void Start()
+    
+    //-----駒の状態をリセット-----
+    void ResetCapState(GameObject enemyPiece)
     {
-        _heldPieceManager = FindObjectOfType<HeldPieceManager>();
-        _shogiManager = FindObjectOfType<ShogiManager>();
+        Piece capturedPiece = enemyPiece.GetComponent<Piece>();
+        if (capturedPiece != null)
+        {
+            capturedPiece.isSelect = false;
+            capturedPiece._isPromote = false;
+            
+            capturedPiece.wasPromote = false;
+            capturedPiece.nowInEnemyCamp = false;
+            capturedPiece.leftEnemyCampThisTurn = false;
 
-        _shogiPositionX = (int)transform.position.x;
-        _shogiPositionY = (int)transform.position.y;
-
-        _renderer = GetComponent<SpriteRenderer>();
-        _renderer.sprite = defaultSprite;
-
-        _isFastPromote = false;
+            capturedPiece._renderer.sprite = capturedPiece.defaultSprite;
+        }
     }
 
-    //-----駒のクリックを検知-----
+    //-------------------------
+    //---------駒の移動---------
+    //-------------------------
+    
+    // 駒をクリックしたときの処理
     public void OnPointerClick(PointerEventData eventData)
     {
         if (ShogiManager.CanSelect)
@@ -133,7 +153,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         }
     }
 
-    // playerの選択状態でのクリック処理
+    // 選択状態での処理
     public async void OnBoardClick()
     {
         if (Camera.main != null)
@@ -145,7 +165,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
 
             GameObject selectedPieceForTeam = null;
 
-            // 将棋盤の範囲外のクリック判定をなくす
+            // 将棋盤の範囲外をクリックしたら、選択状態を解除
             if (worldMousePos.x <= _mouseMinPos.x || worldMousePos.y <= _mouseMinPos.y ||
                 worldMousePos.x >= _mouseMaxPos.x || worldMousePos.y >= _mouseMaxPos.y)
             {
@@ -153,19 +173,14 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 return;
             }
 
-            //---設置ポジションがリストに含まれるか---
+            //-----移動可能なマス目なら-----
             if (canMovePositions.Contains(intMousePos))
             {
-                // Pieceのみのコライダーを取得する
+                // 選択した場所にすでに駒があるか
                 LayerMask pieceLayer = LayerMask.GetMask("Piece");
                 Collider2D collidedPiece = Physics2D.OverlapPoint(worldMousePos, pieceLayer);
-                if (collidedPiece != null)
-                {
-                    selectedPieceForTeam = collidedPiece.gameObject;
-
-                }
-
-                if (selectedPieceForTeam != null) //設置ポジションにすでに駒があるか
+                if (collidedPiece != null) selectedPieceForTeam = collidedPiece.gameObject;
+                if (selectedPieceForTeam != null)
                 {
                     // 選択した駒のマスにあるオブジェクトタグ
                     GameObject enemyPiece = collidedPiece.gameObject;
@@ -178,13 +193,8 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                             // 持ち駒に追加
                             bool tagIsSente = gameObject.CompareTag("Sente");
                             _heldPieceManager.AddHeldPiece(enemyPiece, capturedPiece.pieceType, tagIsSente);
-                            
                             // 駒の状態をリセット
-                            capturedPiece._isPromote = false;
-                            capturedPiece._renderer.sprite = capturedPiece.defaultSprite;
-                            //capturedPiece._leftEnemyCampThisTurn = false;
-                            //capturedPiece._wasPromote = false;
-                            //capturedPiece._nowInEnemyCamp = false;
+                            ResetCapState(enemyPiece);
 
                             if (capturedPiece.pieceType == PieceId.Hu)
                             {
@@ -203,73 +213,61 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                     }
                 }
 
-                // --- 駒の移動を処理 ---
+                // ---駒の移動---
                 Vector2 fromPosition = transform.position;
-                int prevY = _shogiPositionY; // 移動前のY座標を保持
                 MovePiece(intMousePos);
-
-                // --- 敵陣の判定処理 ---
+                _shogiManager.ClearHighlights();
+                isSelect = false;
+                
+                // -----敵陣の判定処理-----
+                // 敵陣にいたかどうかを判定
                 wasPromote =
-                    (gameObject.CompareTag("Sente") && prevY <= 3) ||
-                    (gameObject.CompareTag("Gote") && prevY >= 7);
+                    (gameObject.CompareTag("Sente") && fromPosition.y <= 3) ||
+                    (gameObject.CompareTag("Gote") && fromPosition.y >= 7);
 
+                // 敵陣にいるかどうかを判定
                 nowInEnemyCamp =
                     (gameObject.CompareTag("Sente") && _shogiPositionY <= 3) ||
                     (gameObject.CompareTag("Gote") && _shogiPositionY >= 7);
-
-                // このターンで敵陣から出たかを記録
+                
                 leftEnemyCampThisTurn = wasPromote && !nowInEnemyCamp;
-                Debug.Log("敵陣を出たかどうか " + leftEnemyCampThisTurn);
-                Debug.Log(wasPromote + " " + nowInEnemyCamp);
-
-                _shogiManager.ClearHighlights();
-                isSelect = false;
 
                 // --- 成駒選択の処理 ---
                 if (nowInEnemyCamp || leftEnemyCampThisTurn)
                 {
                     if (!_isPromote)
                     {
-                        // 成駒選択のUIを表示
+                        // 強制成りが必要な駒（歩・香・桂）のみ適用する
                         switch (pieceType)
                         {
                             case PieceId.Hu:
-                            case PieceId.Kyosha:
+                            case PieceId.Kyosha: 
                                 if (_shogiPositionY <= 1 && gameObject.CompareTag("Sente") ||
                                     _shogiPositionY >= 9 && gameObject.CompareTag("Gote"))
-                                {
-                                    // 強制的に成る
-                                    Debug.Log("hu kyosya");
                                     ForcePromote(intMousePos);
-                                }
                                 break;
         
                             case PieceId.Keima:
                                 if (_shogiPositionY <= 2 && gameObject.CompareTag("Sente") ||
-                                    _shogiPositionY >= 8 && gameObject.CompareTag("Gote"))
-                                {
-                                    // 強制的に成る
-                                    Debug.Log("keima");
+                                    _shogiPositionY >= 8 && gameObject.CompareTag("Gote")) 
                                     ForcePromote(intMousePos);
-                                }
                                 break;
                         }
 
+                        // 成駒選択の処理
                         if (!_isPromote)
                         {
                             bool promote =
                                 await _shogiManager.WaitForPlayerChoiceAsync((int)pieceType, transform.position);
                             HandlePromotionChoice(promote, pieceType, intMousePos);
-
-                            Debug.Log("isFastPromote " + _isFastPromote);
+                            
                             ShogiManager.CurrentSelectedPiece = null;
-                            //return;
                         }
                     }
                 }
                 // 駒の形式変換
                 string moveNotation = _shogiManager.ConvertToShogiNotation(fromPosition, intMousePos);
-                if (_isFastPromote)
+                if (_isFastPromote) // 成駒選択が行われたターンのみ+をつける
                 {
                     moveNotation += "+";
                     _isFastPromote = false;
@@ -278,6 +276,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 string objectTag = gameObject.CompareTag("Sente") ? "☗" : "☖";
                 Debug.Log(objectTag + " " + moveNotation);
                 
+                // 履歴に追加
                 ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
                 if (engineManager != null)
                 {
@@ -296,7 +295,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 }
                 ShogiManager.CurrentSelectedPiece = null;
             }
-            else
+            else // 選択された場所が移動不可な場所な場合
             {
                 isSelect = false;
                 ShogiManager.CurrentSelectedPiece = null;
@@ -370,11 +369,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                 _heldPieceManager.AddHeldPiece(capturedPiece, capturedPieceComponent.pieceType, tagIsSente);
                 
                 // 駒の状態をリセット
-                capturedPieceComponent._isPromote = false;
-                capturedPieceComponent._renderer.sprite = capturedPieceComponent.defaultSprite;
-                capturedPieceComponent.leftEnemyCampThisTurn = false;
-                capturedPieceComponent.wasPromote = false;
-                capturedPieceComponent.nowInEnemyCamp = false;
+                ResetCapState(capturedPiece);
 
                 if (capturedPieceComponent.pieceType == PieceId.Hu)
                 {

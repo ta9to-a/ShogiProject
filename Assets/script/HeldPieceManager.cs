@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using UnityEngine.Serialization;
@@ -17,7 +19,7 @@ public class HeldPieceManager : MonoBehaviour
     public static bool IsHeldPieceSelected; // 持ち駒が選択されているかどうか
     public static GameObject FoundPiece; // 持ち駒の中から見つかった駒
     
-    public System.Action OnHeldPieceChanged;
+    public Action OnHeldPieceChanged;
     
     ShogiManager _shogiManager;
     
@@ -43,31 +45,50 @@ public class HeldPieceManager : MonoBehaviour
         
         enemyPiece.SetActive(false);
         
-        // 先手か後手かを判定
-        bool capturerIsSente = enemyPiece.CompareTag("Sente");
-        if (capturerIsSente) senteInactivePieces.Add(enemyPiece);   // 先手の持ち駒リストに追加
-        else goteInactivePieces.Add(enemyPiece);                    //後手の持ち駒リストに追加
-        
-        // その駒の種類の持ち駒数を増やす
-        if (capturerIsSente) senteHeldPieceType[pieceTypeIndex]++;
-        else goteHeldPieceType[pieceTypeIndex]++;
+        // キャプチャしたプレイヤーの持ち駒リストに追加
+        if (tagIsSente)
+        {
+            senteInactivePieces.Add(enemyPiece);
+            senteHeldPieceType[pieceTypeIndex]++;
+        }
+        else
+        {
+            goteInactivePieces.Add(enemyPiece);
+            goteHeldPieceType[pieceTypeIndex]++;
+        }
         
         OnHeldPieceChanged?.Invoke();
     }
 
-    public void RemoveHeldPiece(Piece.PieceId selectPieceType, bool tagIsSente)
+    public void RemoveHeldPiece(Piece.PieceId selectPieceType)
     {
         // 先手・後手の持ち駒リストを選ぶ
-        List<GameObject> targetList = tagIsSente ? senteInactivePieces : goteInactivePieces;
+        List<GameObject> targetList = ShogiManager.ActivePlayer ? senteInactivePieces : goteInactivePieces;
+        Debug.Log("ターン:" + ShogiManager.ActivePlayer + " " + selectPieceType + " " + targetList.Count + " pieces");
+
         // 持ち駒リストから指定された駒の種類を探す
-        FoundPiece = targetList.Find(target => target.GetComponent<Piece>()?.pieceType == selectPieceType
-        );
-        
-        if (FoundPiece != null || tagIsSente) // プレイヤーのみ
+        FoundPiece = targetList.Find(piece =>
+        {
+            var pieceComponent = piece.GetComponent<Piece>();
+            if (pieceComponent == null)
+            {
+                Debug.LogError($"Piece component not found on {piece.name}");
+                return false;
+            }
+            return pieceComponent.pieceType == selectPieceType;
+        });
+
+        Debug.Log("test");
+
+        // 先手プレイヤーの場合、またはAI（後手）の場合の両方に対応
+        if (FoundPiece != null) 
         {
             IsHeldPieceSelected = true; // 持ち駒が選択された状態にする
-            _shogiManager.CreateDropHighlightSquares(selectPieceType);
-        }
+            if (ShogiManager.ActivePlayer) // プレイヤーの場合のみハイライト表示
+            {
+                _shogiManager.CreateDropHighlightSquares(selectPieceType);
+            }
+        } 
     }
 
     public void SelectedHeldPiece(GameObject foundPiece, Piece.PieceId pieceType)

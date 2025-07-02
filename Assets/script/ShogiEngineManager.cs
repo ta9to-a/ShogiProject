@@ -21,20 +21,24 @@ public class ShogiEngineManager : MonoBehaviour
         string enginePath = Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "YaneuraOu_NNUE_halfKP256-V830Git_APPLEM1");
         string engineDirectory = Path.GetDirectoryName(enginePath);
 
-        ProcessStartInfo startInfo = new ProcessStartInfo()
+        if (engineDirectory != null)
         {
-            FileName = enginePath, // エンジンの実行ファイルパス
-            WorkingDirectory = engineDirectory, // エンジンのディレクトリ
+            ProcessStartInfo startInfo = new ProcessStartInfo()
+            {
+                FileName = enginePath, // エンジンの実行ファイルパス
+                WorkingDirectory = engineDirectory, // エンジンのディレクトリ
             
-            UseShellExecute = false, // 直接制御するようにする
-            // 送信設定
-            RedirectStandardInput = true,  // 送信許可
-            RedirectStandardOutput = true, // 受け取り許可
-            RedirectStandardError = true, // エラー出力
-            CreateNoWindow = true // ウィンドウを表示しない
-        };
+                UseShellExecute = false, // 直接制御するようにする
+                // 送信設定
+                RedirectStandardInput = true,  // 送信許可
+                RedirectStandardOutput = true, // 受け取り許可
+                RedirectStandardError = true, // エラー出力
+                CreateNoWindow = true // ウィンドウを表示しない
+            };
 
-        _engineProcess = new Process { StartInfo = startInfo };
+            _engineProcess = new Process { StartInfo = startInfo };
+        }
+
         _engineProcess.OutputDataReceived += (sender, args) =>
         {
             if (args.Data != null)
@@ -135,8 +139,8 @@ public class ShogiEngineManager : MonoBehaviour
             string bestMove = parts[1];
             
             string objectTag = ShogiManager.ActivePlayer? "☗" : "☖";
-            
             Debug.Log(objectTag + " " + bestMove);
+            
             shogiManager.ReceiveEngineMove(bestMove);
         }
     }
