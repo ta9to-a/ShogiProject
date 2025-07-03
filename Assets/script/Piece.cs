@@ -24,8 +24,10 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     [SerializeField] List<Vector2> canMovePositions = new(); // 駒の移動範囲（リスト）
 
     //【見た目】
-    public Sprite defaultSprite; // デフォルトの見た目
-    public Sprite promotedSprite; // 成駒の見た目
+    public Sprite senteDefaultSprite; // 先手用のデフォルトの見た目
+    public Sprite goteDefaultSprite; // 後手用のデフォルトの見た目
+    public Sprite sentePromotedSprite; // 先手用の成駒の見た目
+    public Sprite gotePromotedSprite; // 後手用の成駒の見た目
     SpriteRenderer _renderer; // Sprite描画コンポーネント
 
     //【他コンポーネント・管理スクリプト】
@@ -50,6 +52,11 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     }
     
     [SerializeField] public PieceId pieceType; // 駒の種類
+
+    void Awake()
+    {
+        _renderer = GetComponent<SpriteRenderer>();
+    }
     
     void Start()
     {
@@ -59,8 +66,14 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         _shogiPositionX = (int)transform.position.x;
         _shogiPositionY = (int)transform.position.y;
 
-        _renderer = GetComponent<SpriteRenderer>();
-        _renderer.sprite = defaultSprite;
+        if (gameObject.CompareTag("Sente"))
+        {
+            _renderer.sprite = senteDefaultSprite;
+        }
+        else if (gameObject.CompareTag("Gote"))
+        {
+            _renderer.sprite = goteDefaultSprite;
+        }
 
         _isFastPromote = false;
     }
@@ -72,11 +85,13 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         {
             gameObject.transform.eulerAngles = new Vector3(0f, 0f, 180f);
             moveDirection = -1;
+            _renderer.sprite = !_isPromote ? senteDefaultSprite : sentePromotedSprite;
         }
         else if (gameObject.CompareTag("Gote"))
         {
             gameObject.transform.eulerAngles = new Vector3(0f, 0f, 0);
             moveDirection = 1;
+            _renderer.sprite = !_isPromote ? goteDefaultSprite : gotePromotedSprite;
         }
 
         pieceType = type;
@@ -95,7 +110,14 @@ public class Piece : MonoBehaviour, IPointerClickHandler
             capturedPiece.nowInEnemyCamp = false;
             capturedPiece.leftEnemyCampThisTurn = false;
 
-            capturedPiece._renderer.sprite = capturedPiece.defaultSprite;
+            if (capturedPiece.CompareTag("Sente"))
+            {
+                capturedPiece._renderer.sprite = capturedPiece.senteDefaultSprite;
+            }
+            else
+            {
+                capturedPiece._renderer.sprite = capturedPiece.goteDefaultSprite;
+            }
         }
     }
 
@@ -108,9 +130,16 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     {
         if (ShogiManager.CanSelect)
         {
-            if (ShogiManager.CurrentSelectedPiece != null)
+            if (ShogiManager.CurrentSelectedPiece != null || HeldPieceManager.FoundPiece != null)
             {
                 // 持ち駒の選択状況をリセット
+                if (HeldPieceManager.IsHeldPieceSelected)
+                {
+                    _shogiManager.ClearHeldPieceSelection();
+                    return;
+                }
+                
+                // すでに選択中の駒がある場合は、選択状態を解除
                 if (ShogiManager.CurrentSelectedPiece == this)
                 {
                     isSelect = false;
@@ -129,7 +158,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
                     return;
                 }
             }
-
+            // 駒を選択状態にする
             if (ShogiManager.ActivePlayer && gameObject.CompareTag("Sente") ||
                 !ShogiManager.ActivePlayer && gameObject.CompareTag("Gote"))
             {
@@ -313,7 +342,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         {
             _isPromote = true;
             leftEnemyCampThisTurn = false;
-            _renderer.sprite = promotedSprite;
+            _renderer.sprite = gameObject.CompareTag("Sente") ? sentePromotedSprite : gotePromotedSprite;
             _isFastPromote = true;
 
             if (pieceType == PieceId.Hu)
@@ -336,7 +365,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     {
         _isPromote = true;
         leftEnemyCampThisTurn = false;
-        _renderer.sprite = promotedSprite;
+        _renderer.sprite = gameObject.CompareTag("Sente") ? sentePromotedSprite : gotePromotedSprite;
         _isFastPromote = true;
 
         // この駒がと金なら、二歩防止リストからこの筋を外す
@@ -384,7 +413,7 @@ public class Piece : MonoBehaviour, IPointerClickHandler
         if (fastPromote)
         {
             _isPromote = true;
-            _renderer.sprite = promotedSprite;
+            _renderer.sprite = gameObject.CompareTag("Sente") ? sentePromotedSprite : gotePromotedSprite;
         }
         
         MovePiece(position);
@@ -534,6 +563,13 @@ public class Piece : MonoBehaviour, IPointerClickHandler
     public void Reset()
     {
         _isPromote = false;
-        _renderer.sprite = defaultSprite;
+        if (gameObject.CompareTag("Sente"))
+        {
+            _renderer.sprite = senteDefaultSprite;
+        }
+        else
+        {
+            _renderer.sprite = goteDefaultSprite;
+        }
     }
 }

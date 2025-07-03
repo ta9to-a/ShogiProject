@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 using UnityEngine.UI;
 using Cysharp.Threading.Tasks;
@@ -23,8 +24,11 @@ public class ShogiManager : MonoBehaviour
     [SerializeField] GameObject piecePrefab;
 
     // スプライト管理
-    public Sprite[] defaultSprites = new Sprite[8];
-    public Sprite[] promotedSprites = new Sprite[8];
+    public Sprite[] defaultSenteSprites = new Sprite[8];
+    public Sprite[] promotedSenteSprites = new Sprite[8];
+    
+    public Sprite[] defaultGoteSprites = new Sprite[8];
+    public Sprite[] promotedGoteSprites = new Sprite[8];
     
     // ハイライトの管理
     [SerializeField] GameObject highlightPrefab; // 駒のハイライト用プレハブ
@@ -58,14 +62,6 @@ public class ShogiManager : MonoBehaviour
         Instance = this;
     }
 
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.P))
-        {
-            Debug.Log($"{ActivePlayer}.{CanSelect}");
-        }
-    }
-
     void Start()
     {
         buttons.SetActive(false);
@@ -94,40 +90,30 @@ public class ShogiManager : MonoBehaviour
     //----------------------------------
     void CreatePieces(Piece.PieceId pieceType, int loopCount, int[] posX, int sentePosY, int gotePosY, string pieceName)
     {
-        Sprite defaultSprite = defaultSprites[(int)pieceType];
-        Sprite promotedSprite = promotedSprites[(int)pieceType];
-
         for (int i = 0; i < loopCount; i++)
         {
             int x = posX[i];
         
             // 先手の駒を作成
-            CreateSinglePiece(pieceType, x, sentePosY, "Sente", $"先手:{pieceName}.{i + 1}", 
-                defaultSprite, promotedSprite, x - 1, true);
+            CreateSinglePiece(pieceType, x, sentePosY, "Sente", $"先手:{pieceName}.{i + 1}", x - 1, true);
         
             // 後手の駒を作成
-            CreateSinglePiece(pieceType, x, gotePosY, "Gote", $"後手:{pieceName}.{i + 1}", 
-                defaultSprite, promotedSprite, x - 1, false);
+            CreateSinglePiece(pieceType, x, gotePosY, "Gote", $"後手:{pieceName}.{i + 1}", x - 1, false);
         }
     }
     
     void CreateDiagonalPieces(Piece.PieceId pieceType, int senteX, int senteY, int goteX, int goteY, string pieceName)
     {
-        Sprite defaultSprite = defaultSprites[(int)pieceType];
-        Sprite promotedSprite = promotedSprites[(int)pieceType];
-    
         // 先手の駒を作成
-        CreateSinglePiece(pieceType, senteX, senteY, "Sente", $"先手:{pieceName}.1", 
-            defaultSprite, promotedSprite, -1, true);
+        CreateSinglePiece(pieceType, senteX, senteY, "Sente", $"先手:{pieceName}.1", -1, true);
     
         // 後手の駒を作成
-        CreateSinglePiece(pieceType, goteX, goteY, "Gote", $"後手:{pieceName}.1", 
-            defaultSprite, promotedSprite, -1, false);
+        CreateSinglePiece(pieceType, goteX, goteY, "Gote", $"後手:{pieceName}.1", -1, false);
     }
     
     // -----駒の設置-----
     void CreateSinglePiece(Piece.PieceId pieceType, int posX, int posY, string tag, string pieceName, 
-        Sprite defaultSprite, Sprite promotedSprite, int fuPositionIndex, bool isSente)
+        int fuPositionIndex, bool isSente)
     {
         // 駒の
         GameObject piece = Instantiate(piecePrefab, new Vector2(posX, posY), Quaternion.identity);
@@ -136,10 +122,14 @@ public class ShogiManager : MonoBehaviour
         // 駒の基本設定
         piece.tag = tag;
         piece.name = pieceName;
+        
+        pieceScript.senteDefaultSprite = defaultSenteSprites[(int)pieceType];
+        pieceScript.sentePromotedSprite = promotedSenteSprites[(int)pieceType];
+        pieceScript.goteDefaultSprite = defaultGoteSprites[(int)pieceType];
+        pieceScript.gotePromotedSprite = promotedGoteSprites[(int)pieceType];
+        
         pieceScript.ApplyStatePiece(pieceType);
-        pieceScript.defaultSprite = defaultSprite;
-        pieceScript.promotedSprite = promotedSprite;
-    
+        
         // 歩兵の場合は位置情報を記録（fuPositionIndex が -1 でない場合のみ）
         if (pieceType == Piece.PieceId.Hu && fuPositionIndex >= 0)
         {
@@ -186,6 +176,14 @@ public class ShogiManager : MonoBehaviour
                 Piece.PieceId currentPieceType = HeldPieceManager.SelectedPieceType;
                 findObjectOfType.SelectedHeldPiece(HeldPieceManager.FoundPiece, currentPieceType);
             }
+        }
+    }
+
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Debug.Log("駒の選択状況 " + CurrentSelectedPiece.isSelect);
         }
     }
     
@@ -536,8 +534,8 @@ public class ShogiManager : MonoBehaviour
         Image promoteImage = trueButton.GetComponentInChildren<Image>();
         Image defaltImage = falseButton.GetComponentInChildren<Image>();
 
-        promoteImage.sprite = promotedSprites[pieceType];
-        defaltImage.sprite = defaultSprites[pieceType];
+        promoteImage.sprite = promotedSenteSprites[pieceType];
+        defaltImage.sprite = defaultSenteSprites[pieceType];
         
         // RectTransformを取得
         RectTransform rectTransform = buttons.GetComponent<RectTransform>();

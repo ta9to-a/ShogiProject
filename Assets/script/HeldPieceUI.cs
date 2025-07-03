@@ -26,7 +26,7 @@ public class HeldPieceUI : MonoBehaviour
             : new Vector3(10.75f, 3.7f, 0f);         // 後手：右下
 
         int placedIndex = 0;
-        for (int i = 0; i < shogiManager.defaultSprites.Length - 1; i++)
+        for (int i = 0; i < shogiManager.defaultSenteSprites.Length - 1; i++)
         {
             Vector3 position;
 
@@ -52,7 +52,8 @@ public class HeldPieceUI : MonoBehaviour
             GameObject heldPieceObj = Instantiate(heldPiecePrefab, position, Quaternion.identity);
             heldPieceObj.transform.SetParent(this.transform, false); // 子オブジェクトに設定
             // スプライト設定
-            heldPieceObj.GetComponent<SpriteRenderer>().sprite = shogiManager.defaultSprites[i];
+            Sprite[] sprites = isSente ? shogiManager.defaultSenteSprites : shogiManager.defaultGoteSprites;
+            heldPieceObj.GetComponent<SpriteRenderer>().sprite = sprites[i];
 
             // 持ち駒データの設定
             HeldPieceData data = heldPieceObj.AddComponent<HeldPieceData>();
@@ -100,7 +101,8 @@ public class HeldPieceUI : MonoBehaviour
             clone.transform.localScale = Vector3.one;
     
             SpriteRenderer cloneRenderer = clone.GetComponent<SpriteRenderer>();
-            cloneRenderer.sprite = shogiManager.defaultSprites[(int)pieceType];
+            Sprite[] sprites = isSente ? shogiManager.defaultSenteSprites : shogiManager.defaultGoteSprites;
+            cloneRenderer.sprite = sprites[(int)pieceType];
     
             // 左側の駒ほど高いsortingOrderを設定（左側が上に表示）
             cloneRenderer.sortingOrder = count - i;
