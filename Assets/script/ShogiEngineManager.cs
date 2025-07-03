@@ -44,7 +44,6 @@ public class ShogiEngineManager : MonoBehaviour
             if (args.Data != null)
             {
                 string engineResponse = args.Data;
-        
                 if (engineResponse == "usiok")
                 {
                     Debug.Log("Engine > " + engineResponse);
@@ -132,7 +131,6 @@ public class ShogiEngineManager : MonoBehaviour
     // AIの最善手を解析する
     void ParseBestMove(string response)
     {
-        Debug.Log("Engine > " + response);
         string[] parts = response.Split(' ');
         if (parts.Length > 1)
         {
@@ -163,7 +161,5 @@ public class ShogiEngineManager : MonoBehaviour
     
         SendCommand(positionCommand);
         SendCommand("go byoyomi " + aiThinkTimeMs);
-       
-        Debug.Log("positionCommand :" + positionCommand);
     }
 }

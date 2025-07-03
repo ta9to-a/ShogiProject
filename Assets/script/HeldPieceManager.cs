@@ -64,8 +64,6 @@ public class HeldPieceManager : MonoBehaviour
     {
         // 先手・後手の持ち駒リストを選ぶ
         List<GameObject> targetList = ShogiManager.ActivePlayer ? senteInactivePieces : goteInactivePieces;
-        Debug.Log("ターン:" + ShogiManager.ActivePlayer + " " + selectPieceType + " " + targetList.Count + " pieces");
-
         // 持ち駒リストから指定された駒の種類を探す
         FoundPiece = targetList.Find(piece =>
         {
@@ -77,8 +75,6 @@ public class HeldPieceManager : MonoBehaviour
             }
             return pieceComponent.pieceType == selectPieceType;
         });
-
-        Debug.Log("test");
 
         // 先手プレイヤーの場合、またはAI（後手）の場合の両方に対応
         if (FoundPiece != null) 
@@ -201,7 +197,6 @@ public class HeldPieceManager : MonoBehaviour
                 if (engineManager != null)
                 {
                     engineManager.RequestBestMoveWithHistory();
-                    Debug.Log("AIのターン: 最善手を要求");
                 }
             }
             

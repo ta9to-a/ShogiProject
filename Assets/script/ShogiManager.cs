@@ -342,13 +342,10 @@ public class ShogiManager : MonoBehaviour
             'B' => Piece.PieceId.Kaku,   // 角
             _ => throw new ArgumentException("不明な持ち駒: " + pieceChar)
         };
-        
-        Debug.Log($"変換後の駒:{pieceType}");
-        
+          
         heldPieceManager.RemoveHeldPiece(pieceType);
         if (HeldPieceManager.FoundPiece != null && HeldPieceManager.IsHeldPieceSelected)
         {
-            Debug.Log("持ち駒を配置します");
             HeldPieceManager.FoundPiece.transform.position = new Vector2(toX, toY);
             HeldPieceManager.FoundPiece.SetActive(true);
 
