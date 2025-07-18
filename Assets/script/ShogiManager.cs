@@ -178,14 +178,6 @@ public class ShogiManager : MonoBehaviour
             }
         }
     }
-
-    void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Debug.Log("駒の選択状況 " + CurrentSelectedPiece.isSelect);
-        }
-    }
     
     public void ClearPieceSelection()
     {

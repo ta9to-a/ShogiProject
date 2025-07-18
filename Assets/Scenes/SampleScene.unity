@@ -379,8 +379,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -53.75, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: -21, y: 0}
+  m_SizeDelta: {x: 40, y: 40}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &558494462
 MonoBehaviour:
@@ -524,7 +524,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0cd44c1031e13a943bb63640046fad76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_UiScaleMode: 0
+  m_UiScaleMode: 1
   m_ReferencePixelsPerUnit: 100
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 800, y: 600}
@@ -613,8 +613,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 53.75, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_AnchoredPosition: {x: 21, y: 0}
+  m_SizeDelta: {x: 40, y: 40}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &818408945
 MonoBehaviour:
@@ -930,23 +930,23 @@ MonoBehaviour:
   - {fileID: 21300000, guid: 9dcea52f96eee4058b9fc69861d1533f, type: 3}
   - {fileID: 21300000, guid: 852678ecc28f1419f9cf12f70980a2ad, type: 3}
   defaultGoteSprites:
-  - {fileID: 21300000, guid: 274dcbef2c7b140e58f01e238450a662, type: 3}
-  - {fileID: 21300000, guid: d684064d8d2994a85829fb353ad7e965, type: 3}
-  - {fileID: 21300000, guid: 6d8690ec31bdb443fb47a9b99c170b3d, type: 3}
-  - {fileID: 21300000, guid: 08568fff2581e407b80d6ed813f55e95, type: 3}
-  - {fileID: 21300000, guid: 8d9a523405f2849b19515738d0f20402, type: 3}
-  - {fileID: 21300000, guid: e0c5728d3677f4a029c86d6d54a3a158, type: 3}
-  - {fileID: 21300000, guid: 040aa339e2fba4a28910ec07004109e3, type: 3}
-  - {fileID: 21300000, guid: 7d01ce259fd264a0293bacee453bb1ed, type: 3}
+  - {fileID: 21300000, guid: 8260523424970421f9f87edf2e834753, type: 3}
+  - {fileID: 21300000, guid: 61cae3f4c8e514b0abc0a344e3ef7b64, type: 3}
+  - {fileID: 21300000, guid: 7c6aa74ef050247f2839dd5a0d4d3428, type: 3}
+  - {fileID: 21300000, guid: c482e6f751b7e44278f777567da20626, type: 3}
+  - {fileID: 21300000, guid: 0b5e6dedb7eb8467c88401bd5268d043, type: 3}
+  - {fileID: 21300000, guid: 4db94f5ffe50b4f8c97a180235188252, type: 3}
+  - {fileID: 21300000, guid: c1a880ce330264585acdae1359625f9b, type: 3}
+  - {fileID: 21300000, guid: 87ef3d92761e04dc7877fb9b06ab34d7, type: 3}
   promotedGoteSprites:
-  - {fileID: 21300000, guid: a98ab6109889d49f4b0a60240fb0453c, type: 3}
-  - {fileID: 21300000, guid: 85ab92d7863b8462f8eb13d113ded742, type: 3}
-  - {fileID: 21300000, guid: 48fba730f0c034cfb8e0cea946813a82, type: 3}
-  - {fileID: 21300000, guid: 595ce9921cb9941548042875d18bf5ea, type: 3}
-  - {fileID: 21300000, guid: dc697321b96a34a4d8b1bbafe3ef0ce7, type: 3}
-  - {fileID: 21300000, guid: 258017128dc7347b582a914a948bf18b, type: 3}
-  - {fileID: 21300000, guid: 7f2e1e3b6c2844e56854a8632d5ca378, type: 3}
-  - {fileID: 21300000, guid: 17b2a559f09334512bc91a92bb279d3a, type: 3}
+  - {fileID: 21300000, guid: 5ba444159ac3b476a932e3a88804402f, type: 3}
+  - {fileID: 21300000, guid: 866f75936948146228c9e4027a4ea272, type: 3}
+  - {fileID: 21300000, guid: 299040071511343158084c9d059bb82d, type: 3}
+  - {fileID: 21300000, guid: 36c8abf4f0b604f8db7a9ec1193257f2, type: 3}
+  - {fileID: 21300000, guid: 9131ad0b10dfd4fd38706082ba161a6b, type: 3}
+  - {fileID: 21300000, guid: 0de4e6baddc384e9ca786f35b0873f9e, type: 3}
+  - {fileID: 21300000, guid: 018f548dfd5cd4aa0aeb382b4111f513, type: 3}
+  - {fileID: 21300000, guid: eb87f034f872640089601ddae82b0f17, type: 3}
   highlightPrefab: {fileID: 1601777575353363739, guid: d8a6185032b784ea393c568ade496be4, type: 3}
   buttons: {fileID: 1870663183}
   trueButton: {fileID: 818408945}
@@ -1028,6 +1028,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   aiThinkTimeMs: 1500
+  depthLimit: 0
+  nodesLimit: 0
   shogiManager: {fileID: 2035514905}
 --- !u!4 &2040609623
 Transform:

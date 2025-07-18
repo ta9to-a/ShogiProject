@@ -11,12 +11,18 @@ public class ShogiEngineManager : MonoBehaviour
     private StreamWriter _engineStreamWriter;
     private StreamReader _engineStreamReader;
     
-    [SerializeField] private int aiThinkTimeMs = 3000;
+    [SerializeField] int aiThinkTimeMs;
+    [SerializeField] int depthLimit;
+    [SerializeField] int nodesLimit;
     
     public ShogiManager shogiManager;
 
+    private Stopwatch _thinkingStopwatch;
+
     void Start()
     {
+        _thinkingStopwatch = new Stopwatch();
+
         // エンジンのパスを取得
         string enginePath = Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "YaneuraOu_NNUE_halfKP256-V830Git_APPLEM1");
         string engineDirectory = Path.GetDirectoryName(enginePath);
@@ -84,6 +90,14 @@ public class ShogiEngineManager : MonoBehaviour
     {
         SendCommand("usi");
         await Task.Delay(1000); // エンジンの応答を待つ
+        
+        SendCommand("setoption name Depth value " + depthLimit);
+        SendCommand("setoption name Nodes value " + nodesLimit);
+        
+        Debug.Log("読み手: " + (depthLimit > 0 ? depthLimit + "手" : "無制限"));
+        Debug.Log("ノード数制限: " + (nodesLimit > 0 ? nodesLimit.ToString() : "無制限"));
+        Debug.Log("AI思考時間: " + aiThinkTimeMs + "ms");
+        
         SendCommand("isready");
     }
 
@@ -124,13 +138,17 @@ public class ShogiEngineManager : MonoBehaviour
     
     public void StartThinking(int thinkTimeMs = -1)
     {
-        int actualThinkTime = (thinkTimeMs == -1) ? aiThinkTimeMs : thinkTimeMs;
+        _thinkingStopwatch.Restart();
+        int actualThinkTime = thinkTimeMs == -1 ? aiThinkTimeMs : thinkTimeMs;
         SendCommand($"go byoyomi {actualThinkTime}");
     }
 
     // AIの最善手を解析する
-    void ParseBestMove(string response)
+    async void ParseBestMove(string response)
     {
+        _thinkingStopwatch.Stop();
+        long elapsedMilliseconds = _thinkingStopwatch.ElapsedMilliseconds;
+
         string[] parts = response.Split(' ');
         if (parts.Length > 1)
         {
@@ -138,6 +156,12 @@ public class ShogiEngineManager : MonoBehaviour
             
             string objectTag = ShogiManager.ActivePlayer? "☗" : "☖";
             Debug.Log(objectTag + " " + bestMove);
+
+            long delayMs = 375 - elapsedMilliseconds;
+            if (delayMs > 0)
+            {
+                await Task.Delay((int)delayMs);
+            }
             
             shogiManager.ReceiveEngineMove(bestMove);
         }
@@ -160,6 +184,6 @@ public class ShogiEngineManager : MonoBehaviour
         }
     
         SendCommand(positionCommand);
-        SendCommand("go byoyomi " + aiThinkTimeMs);
+        StartThinking();
     }
 }
