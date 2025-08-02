@@ -1,10 +1,10 @@
-using System.Collections;
+/*using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class HeldPieceData : MonoBehaviour
 {
-    [SerializeField] public Piece.PieceId pieceType;
+    [SerializeField] public ShogiDefinitions.PieceType pieceType;
     [SerializeField] public bool isSente;
 	[SerializeField] public bool isHeldPieceCount;
     
@@ -71,4 +71,4 @@ public class HeldPieceData : MonoBehaviour
         Vector3 basePosition = transform.position;
         _heldPieceUI.ManageClones(pieceType, isSente, basePosition, currentCount, this.transform);
     }
-}
+}*/

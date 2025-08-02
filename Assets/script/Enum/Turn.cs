@@ -1,0 +1,1 @@
+public enum Turn { 先手, 後手 }

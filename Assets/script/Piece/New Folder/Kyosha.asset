@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 27fd068f366f74cf285c9da8fd8cece4, type: 3}
+  m_Name: Kyosha
+  m_EditorClassIdentifier: 
+  pieceType: 1
+  unpromotedSenteSprite: {fileID: 21300000, guid: b2cbbdeb5bce943d694db06ca9071bfa, type: 3}
+  unpromotedGoteSprite: {fileID: 21300000, guid: 61cae3f4c8e514b0abc0a344e3ef7b64, type: 3}
+  promotedSenteSprite: {fileID: 21300000, guid: d95ad3fbbbd5f40719d3e59110c6af11, type: 3}
+  promotedGoteSprite: {fileID: 21300000, guid: 866f75936948146228c9e4027a4ea272, type: 3}

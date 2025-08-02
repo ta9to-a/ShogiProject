@@ -1,4 +1,4 @@
-using System;
+/*using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -119,7 +119,7 @@ public class HeldPieceManager : MonoBehaviour
             { 
                 // 二歩チェック;
                 bool isSente = foundPiece.CompareTag("Sente");
-                bool[] targetFuPositions = isSente ? _shogiManager.senteFuPosition : _shogiManager.goteFuPosition;
+                bool[] targetFuPositions = isSente ? ShogiManager.SenteFuPosition : ShogiManager.GoteFuPosition;
 
                 if (targetFuPositions[(int)intMousePos.x - 1])
                 {
@@ -221,4 +221,4 @@ public class HeldPieceManager : MonoBehaviour
         char y = (char)('a' + (int)position.y - 1); // y座標を段に変換
         return $"{pieceChar}*{position.x}{y}";
     }
-}
+}*/

@@ -46,12 +46,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5d35f5983753d4d619fe169372f5c5e1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isSelect: 0
-  moveDirection: 0
-  canMovePositions: []
-  defaultSprite: {fileID: 0}
-  promotedSprite: {fileID: 0}
-  pieceType: 0
 --- !u!212 &5973631054656250155
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -98,7 +92,7 @@ SpriteRenderer:
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 1, y: 1}
+  m_Size: {x: 2.81, y: 3.45}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 0
@@ -140,12 +134,12 @@ BoxCollider2D:
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
-    oldSize: {x: 2.91, y: 3.5206566}
-    newSize: {x: 2.91, y: 3.5206566}
+    oldSize: {x: 2.81, y: 3.45}
+    newSize: {x: 2.81, y: 3.45}
     adaptiveTilingThreshold: 0.5
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
   serializedVersion: 2
-  m_Size: {x: 4.5, y: 4.5}
+  m_Size: {x: 4.15, y: 4.15}
   m_EdgeRadius: 0

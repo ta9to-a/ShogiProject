@@ -1,4 +1,4 @@
-using System;
+/*using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -9,26 +9,14 @@ public class ShogiManager : MonoBehaviour
 {
     // シングルトン管理
     public static ShogiManager Instance { get; private set; }
-
-    // 現在選択されている駒（グローバル）
-    public static Piece CurrentSelectedPiece; // 選択中の駒
+    public static GameObject CurrentSelectedPiece; // 現在選択されている駒
 
     // ゲーム進行・状態管理
     public static bool ActivePlayer; // 現在のターン（true:先手, false:後手）
 
     // 二歩チェック用の歩の列情報
-    public bool[] senteFuPosition = new bool[9]; // 先手の歩の列状態
-    public bool[] goteFuPosition = new bool[9];  // 後手の歩の列状態
-
-    // 駒生成などのプレハブ参照
-    [SerializeField] GameObject piecePrefab;
-
-    // スプライト管理
-    public Sprite[] defaultSenteSprites = new Sprite[8];
-    public Sprite[] promotedSenteSprites = new Sprite[8];
-    
-    public Sprite[] defaultGoteSprites = new Sprite[8];
-    public Sprite[] promotedGoteSprites = new Sprite[8];
+    public static bool[] SenteFuPosition = new bool[9]; // 先手の歩の列状態
+    public static bool[] GoteFuPosition = new bool[9];  // 後手の歩の列状態
     
     // ハイライトの管理
     [SerializeField] GameObject highlightPrefab; // 駒のハイライト用プレハブ
@@ -49,7 +37,7 @@ public class ShogiManager : MonoBehaviour
     [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
 
     bool _isFastPromote; // 成駒の選択がされているか
-
+    
     void Awake()
     {
         _camera = Camera.main;
@@ -71,73 +59,8 @@ public class ShogiManager : MonoBehaviour
         
         trueButton.onClick.AddListener(() => Choose(true));
         falseButton.onClick.AddListener(() => Choose(false));
-        
-        // 駒の配置
-        CreatePieces(Piece.PieceId.Hu, 9, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 7, 3, "歩兵");
-        CreatePieces(Piece.PieceId.Keima, 2, new[] { 2, 8 }, 9, 1, "桂馬");
-        CreatePieces(Piece.PieceId.Gin, 2, new[] { 3, 7 }, 9, 1, "銀将");
-        CreatePieces(Piece.PieceId.Kin, 2, new[] { 4, 6 }, 9, 1, "金将");
-        CreatePieces(Piece.PieceId.Kyosha, 2, new[] { 1, 9 }, 9, 1, "香車");
-        CreatePieces(Piece.PieceId.Gyoku, 1, new[] { 5 }, 9, 1, "玉将");
-        CreateDiagonalPieces(Piece.PieceId.Kaku, 8, 8, 2, 2, "角");
-        CreateDiagonalPieces(Piece.PieceId.Hisha, 2, 8, 8, 2, "飛車");
 
         shogiEngMan.SetStartPosition();
-    }
-    
-    //----------------------------------
-    //------------駒の初期配置------------
-    //----------------------------------
-    void CreatePieces(Piece.PieceId pieceType, int loopCount, int[] posX, int sentePosY, int gotePosY, string pieceName)
-    {
-        for (int i = 0; i < loopCount; i++)
-        {
-            int x = posX[i];
-        
-            // 先手の駒を作成
-            CreateSinglePiece(pieceType, x, sentePosY, "Sente", $"先手:{pieceName}.{i + 1}", x - 1, true);
-        
-            // 後手の駒を作成
-            CreateSinglePiece(pieceType, x, gotePosY, "Gote", $"後手:{pieceName}.{i + 1}", x - 1, false);
-        }
-    }
-    
-    void CreateDiagonalPieces(Piece.PieceId pieceType, int senteX, int senteY, int goteX, int goteY, string pieceName)
-    {
-        // 先手の駒を作成
-        CreateSinglePiece(pieceType, senteX, senteY, "Sente", $"先手:{pieceName}.1", -1, true);
-    
-        // 後手の駒を作成
-        CreateSinglePiece(pieceType, goteX, goteY, "Gote", $"後手:{pieceName}.1", -1, false);
-    }
-    
-    // -----駒の設置-----
-    void CreateSinglePiece(Piece.PieceId pieceType, int posX, int posY, string tag, string pieceName, 
-        int fuPositionIndex, bool isSente)
-    {
-        // 駒の
-        GameObject piece = Instantiate(piecePrefab, new Vector2(posX, posY), Quaternion.identity);
-        Piece pieceScript = piece.GetComponent<Piece>();
-    
-        // 駒の基本設定
-        piece.tag = tag;
-        piece.name = pieceName;
-        
-        pieceScript.senteDefaultSprite = defaultSenteSprites[(int)pieceType];
-        pieceScript.sentePromotedSprite = promotedSenteSprites[(int)pieceType];
-        pieceScript.goteDefaultSprite = defaultGoteSprites[(int)pieceType];
-        pieceScript.gotePromotedSprite = promotedGoteSprites[(int)pieceType];
-        
-        pieceScript.ApplyStatePiece(pieceType);
-        
-        // 歩兵の場合は位置情報を記録（fuPositionIndex が -1 でない場合のみ）
-        if (pieceType == Piece.PieceId.Hu && fuPositionIndex >= 0)
-        {
-            if (isSente) 
-                senteFuPosition[fuPositionIndex] = true;
-            else
-                goteFuPosition[fuPositionIndex] = true;
-        }
     }
     
     //----------------------------------
@@ -439,7 +362,7 @@ public class ShogiManager : MonoBehaviour
         {
             if (pieceType == Piece.PieceId.Hu)
             {
-                bool fuPositionCheck = ActivePlayer ? senteFuPosition[x - 1] : goteFuPosition[x - 1];
+                bool fuPositionCheck = ActivePlayer ? SenteFuPosition[x - 1] : GoteFuPosition[x - 1];
                 if (fuPositionCheck)
                 {
                     // その列（x座標）の全マスを設置不可としてハイライト
@@ -555,4 +478,4 @@ public class ShogiManager : MonoBehaviour
         // 選択結果を返す
         return _playerChoice != null && _playerChoice.Value;
     }
-}
+}*/

@@ -1,4 +1,4 @@
-using UnityEngine;
+/*using UnityEngine;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -186,4 +186,4 @@ public class ShogiEngineManager : MonoBehaviour
         SendCommand(positionCommand);
         StartThinking();
     }
-}
+}*/
