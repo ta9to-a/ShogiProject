@@ -1,4 +1,4 @@
-/*using System;
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -9,12 +9,14 @@ public class ShogiManager : MonoBehaviour
 {
     // シングルトン管理
     public static ShogiManager Instance { get; private set; }
-    public static GameObject CurrentSelectedPiece; // 現在選択されている駒
 
     // ゲーム進行・状態管理
-    public static bool ActivePlayer; // 現在のターン（true:先手, false:後手）
+    public Turn activePlayer; // 現在の手番（先手 or 後手）
+    public string[,] BoardState = new string[9, 9]; // 盤面の状態を管理
+    
+    public GameObject curSelPiece; // 現在選択されている駒
 
-    // 二歩チェック用の歩の列情報
+    /*// 二歩チェック用の歩の列情報
     public static bool[] SenteFuPosition = new bool[9]; // 先手の歩の列状態
     public static bool[] GoteFuPosition = new bool[9];  // 後手の歩の列状態
     
@@ -36,11 +38,10 @@ public class ShogiManager : MonoBehaviour
     [SerializeField] HeldPieceManager heldPieceManager; // 持ち駒管理
     [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
 
-    bool _isFastPromote; // 成駒の選択がされているか
+    bool _isFastPromote; // 成駒の選択がされているか*/
     
     void Awake()
     {
-        _camera = Camera.main;
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -49,8 +50,8 @@ public class ShogiManager : MonoBehaviour
         
         Instance = this;
     }
-
-    void Start()
+    
+    /*void Start()
     {
         buttons.SetActive(false);
         ActivePlayer = true;
@@ -66,7 +67,6 @@ public class ShogiManager : MonoBehaviour
     //----------------------------------
     //------------選択中の処理------------
     //----------------------------------
-    void OnMouseDown()
     {
         // マウス座標をワールド座標に変換
         Vector3 mousePosition = Input.mousePosition;
@@ -477,5 +477,5 @@ public class ShogiManager : MonoBehaviour
     
         // 選択結果を返す
         return _playerChoice != null && _playerChoice.Value;
-    }
-}*/
+    }*/
+}

@@ -6,7 +6,7 @@ using Debug = System.Diagnostics.Debug;
 [CreateAssetMenu(fileName = "PieceDatabase", menuName = "Shogi/PieceDatabase")]
 public class PieceDatabase : ScriptableObject
 {
-    [SerializeField] private List<PieceData> pieceDataList;
+    [SerializeField] public List<PieceData> pieceDataList;
     private Dictionary<PieceType, PieceData> _pieceDataDict;
 
     private void OnEnable()
