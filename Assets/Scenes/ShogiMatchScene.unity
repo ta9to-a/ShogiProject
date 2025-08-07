@@ -1222,6 +1222,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   activePlayer: 0
   curSelPiece: {fileID: 0}
+  senteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
+  goteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

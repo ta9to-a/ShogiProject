@@ -122,8 +122,7 @@ public class BoardInitializer : MonoBehaviour
     /// </summary>
     public void CreateCapturePieces(Turn turn)
     {
-        bool isSente = (turn == Turn.先手);
-        Vector2 basePos = isSente ? senteBasePosition : goteBasePosition;
+        Vector2 basePos = (turn == Turn.先手) ? senteBasePosition : goteBasePosition;
         List<PieceType?[]> pieceLayout = new List<PieceType?[]>
         {
             new PieceType?[] { PieceType.香車, PieceType.桂馬 },
@@ -140,8 +139,8 @@ public class BoardInitializer : MonoBehaviour
                 
                 PieceData data = pieceDatabase.GetPieceData(type.Value);
                 Vector2 pos = new Vector2(
-                    basePos.x + col * capturePieceWidth * (isSente ? 1f : -1f),
-                    basePos.y + row * capturePieceHeight * (isSente ? -1f : 1f)
+                    basePos.x + col * capturePieceWidth * (turn == Turn.先手 ? 1f : -1f),
+                    basePos.y + row * capturePieceHeight * (turn == Turn.先手 ? -1f : 1f)
                 );
 
                 CreateCapturePieceObject(turn, data, pos);
@@ -159,12 +158,11 @@ public class BoardInitializer : MonoBehaviour
         obj.transform.SetParent(capturePieceParent.transform, false);
         
         SpriteRenderer capPieceRenderer = obj.GetComponent<SpriteRenderer>();
-        bool isSente = (turn == Turn.先手);
-        capPieceRenderer.sprite = isSente ? pieceData.unpromotedSenteSprite : pieceData.unpromotedGoteSprite;
+        capPieceRenderer.sprite = (turn == Turn.先手) ? pieceData.unpromotedSenteSprite : pieceData.unpromotedGoteSprite;
         capPieceRenderer.sortingOrder = 18;
         
         obj.layer = LayerMask.NameToLayer("CapturePiece");
-        obj.tag = isSente ? "Sente" : "Gote";
+        obj.tag = (turn == Turn.先手) ? "Sente" : "Gote";
 
         obj.GetComponent<CapturePiece>().ApplyStateCapturePiece(pieceData.pieceType, capPieceRenderer.sprite);
     }

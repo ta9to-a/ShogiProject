@@ -12,9 +12,13 @@ public class ShogiManager : MonoBehaviour
 
     // ゲーム進行・状態管理
     public Turn activePlayer; // 現在の手番（先手 or 後手）
-    public string[,] BoardState = new string[9, 9]; // 盤面の状態を管理
+    public PieceType[,] BoardState = new PieceType[9, 9]; // 盤面の状態を管理
     
     public GameObject curSelPiece; // 現在選択されている駒
+    
+    // 持ち駒の状態を管理
+    public int[] senteCapturedPieceType = new int[7];   // 先手の持ち駒の種類ごとの数
+    public int[] goteCapturedPieceType = new int[7];    // 後手の持ち駒の種類ごとの数
 
     /*// 二歩チェック用の歩の列情報
     public static bool[] SenteFuPosition = new bool[9]; // 先手の歩の列状態
@@ -40,7 +44,7 @@ public class ShogiManager : MonoBehaviour
 
     bool _isFastPromote; // 成駒の選択がされているか*/
     
-    void Awake()
+    private void Awake()
     {
         if (Instance != null && Instance != this)
         {
@@ -49,6 +53,27 @@ public class ShogiManager : MonoBehaviour
         }
         
         Instance = this;
+    }
+    
+    /// <summary>
+    /// 局面の移動フェーズを終了し、次の手番に移行
+    /// </summary>
+    public void EndMovePhase()
+    {
+        // 局面の保存
+        AdvanceKifu();
+        
+        // 手番を切り替える
+        curSelPiece = null;
+        activePlayer = (activePlayer == Turn.先手) ? Turn.後手 : Turn.先手;
+    }
+
+    /// <summary>
+    /// 現在の局面を記譜法に追加
+    /// </summary>
+    private void AdvanceKifu()
+    {
+        
     }
     
     /*void Start()

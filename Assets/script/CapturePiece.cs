@@ -5,6 +5,7 @@ using UnityEngine;
 public class CapturePiece : MonoBehaviour
 {
     private PieceType _capturePieceType; // 駒の種類
+    private int _heldPieceCount; // 持ち駒の数
     private Turn _capturePieceTurn;
     
     private Sprite _captureSprite; // 成る前のスプライト
@@ -29,8 +30,13 @@ public class CapturePiece : MonoBehaviour
         transform.rotation = transform.CompareTag("Sente") ?
             Quaternion.Euler(0, 0, 0) :     // 先手
             Quaternion.Euler(0, 0, 180);    // 後手
+
+        UpdateVisualState();
     }
     
+    /// <summary>
+    /// 持ち駒の選択処理
+    /// </summary>
     public void SelectCapturePiece()
     {
         // 駒の選択処理
@@ -47,5 +53,21 @@ public class CapturePiece : MonoBehaviour
                 Debug.Log("駒の選択が解除されました");
             }
         }
+    }
+
+    /// <summary>
+    /// 持ち駒のビジュアルを状態に応じて更新する
+    /// </summary>
+    private void UpdateVisualState()
+    {
+        int pieceIndex = (int)_capturePieceType;
+        // 先手と後手の持ち駒の数を取得
+        int currentCount = _capturePieceTurn == Turn.先手 ? 
+            ShogiManager.Instance.senteCapturedPieceType[pieceIndex] : 
+            ShogiManager.Instance.goteCapturedPieceType[pieceIndex];
+        
+        // スプライトの色を更新
+        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
+        spriteRenderer.color = currentCount > 0 ? Color.white : Color.gray;
     }
 }

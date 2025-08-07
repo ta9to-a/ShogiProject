@@ -19,7 +19,12 @@ public class PieceDatabase : ScriptableObject
     /// </summary>
     public PieceData GetPieceData(PieceType pieceType)
     {
-        if (_pieceDataDict == null) OnEnable();
+        if (_pieceDataDict == null)
+        {
+            OnEnable();
+            Debug.Assert(_pieceDataDict != null,
+                "PieceDatabaseが初期化されていません。OnEnableメソッドを確認してください。");
+        }
         
         _pieceDataDict.TryGetValue(pieceType, out PieceData data);
         return data;

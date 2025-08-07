@@ -49,6 +49,8 @@ public class Piece : MonoBehaviour
                 // 駒が選択されていない場合、現在の駒を選択状態にする
                 ShogiManager.Instance.curSelPiece = this.gameObject;
                 Debug.Log(ShogiManager.Instance.curSelPiece.name + "が選択されました");
+                
+                MovePiece();
             }
             else // 現在選択されている駒がある場合
             {
@@ -61,12 +63,50 @@ public class Piece : MonoBehaviour
     /// <summary>
     /// 駒の移動処理
     /// </summary>
-    /// <param name="movePosition"></param>
-    public void MovePiece(Vector2 movePosition)
+    private async void MovePiece()
     {
-        // 駒の移動処理
-        transform.position = movePosition;
+        // 移動可能なマス目の取得
+        List<Vector2Int> clickedPosition = CheckMovablePositions();
+        // クリックされるまで待つ
+        Vector2Int clickedPoint = await WaitForMouseClick();
         
-        ShogiManager.Instance.curSelPiece = null;
+        // クリックされた位置が移動可能なマス目かチェック
+        if (!clickedPosition.Contains(clickedPoint))
+        {
+            Debug.Log("移動可能なマス目ではありません");
+            ShogiManager.Instance.curSelPiece = null; // 駒の選択を解除
+            return;
+        }
+        
+        // 成駒動作のチェック
+        
+        // 駒の状態を更新
+        ShogiManager.Instance.EndMovePhase();
+    }
+    
+    /// <summary>
+    /// マウスクリックを待機する
+    /// </summary>
+    /// <returns>クリックされた位置の座標</returns>
+    private async UniTask<Vector2Int> WaitForMouseClick()
+    {
+        await UniTask.WaitUntil(() => Input.GetMouseButtonDown(0));
+    
+        Vector2 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        return new Vector2Int(Mathf.RoundToInt(mousePos.x), Mathf.RoundToInt(mousePos.y));
+    }
+
+    /// <summary>
+    /// 移動可能なマス目をチェックする
+    /// </summary>
+    private List<Vector2Int> CheckMovablePositions()
+    {
+        // 駒の移動をデータベースから参照
+        
+        // 移動可能なマス目の計算
+        
+        // クリックされた際の位置を取得し、移動可能なマス目かのチェック
+        List<Vector2Int> checkPosition = new List<Vector2Int>();
+        return checkPosition;
     }
 }
