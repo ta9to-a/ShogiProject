@@ -17,4 +17,10 @@ public class PieceData : ScriptableObject
     public Sprite promotedSenteSprite;
     [Tooltip("後手の成りスプライト")]
     public Sprite promotedGoteSprite;
+    
+    [Header("駒の移動範囲")]
+    [Tooltip("直線移動が可能かどうか")]
+    public bool canStraightMove;
+    [Tooltip("駒の移動可能なマスのリスト")]
+    public Vector2Int[] moveRange;
 }

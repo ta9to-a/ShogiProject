@@ -6,10 +6,6 @@ using UnityEngine.Rendering;
 
 public class BoardInitializer : MonoBehaviour
 {
-    [Header("駒のデータベース")]
-    [SerializeField] private PieceDatabase pieceDatabase;
-    
-    // 各種駒の動作が格納されたプレファブ
     [Header("プレファブ")]
     [SerializeField] private GameObject piecePrefab;
     [SerializeField] private GameObject capturePiecePrefab;
@@ -25,7 +21,10 @@ public class BoardInitializer : MonoBehaviour
     [Header("持ち駒")]
     [SerializeField] private Vector2 senteBasePosition = new (10.75f, 3.7f); // 先手の持ち駒のベース位置
     [SerializeField] private Vector2 goteBasePosition = new (-0.75f, 6.2f); // 後手の持ち駒のベース位置
+    [Space(5)]
+    [Tooltip("持ち駒の横幅")]
     [SerializeField] private float capturePieceWidth = 1.5f; // 持ち駒の横幅
+    [Tooltip("持ち駒の縦幅")]
     [SerializeField] private float capturePieceHeight = 1.0f; // 持ち駒の縦幅
     private Dictionary<string, List<GameObject>> _cloneGroups = new(); // 駒のクローンをグループ
 
@@ -80,9 +79,9 @@ public class BoardInitializer : MonoBehaviour
     /// <summary>
     /// 駒の生成と配置
     /// </summary>
-    private void CreatePiece(PieceType pieceType, Vector2Int position, Turn turn)
+    public void CreatePiece(PieceType pieceType, Vector2Int position, Turn turn)
     {
-        PieceData data = pieceDatabase.GetPieceData(pieceType);
+        PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(pieceType);
         if (data == null)
         {
             Debug.LogError($"PieceDataが見つかりませんでした : {pieceType}");
@@ -113,8 +112,10 @@ public class BoardInitializer : MonoBehaviour
             parentObject = goteParent;
         }
         pieceObj.transform.SetParent(parentObject.transform, false);
-        pieceScript.ApplyStatePiece(pieceType, unpromotedSprite, promotedSprite);
+        pieceScript.ApplyStatePiece(pieceType, position, unpromotedSprite, promotedSprite);
         pieceObj.GetComponent<SpriteRenderer>().sortingOrder = 10;
+        
+        ShogiManager.Instance.BoardState[position.x - 1, position.y - 1] = pieceType;
     }
 
     /// <summary>
@@ -137,7 +138,7 @@ public class BoardInitializer : MonoBehaviour
                 PieceType? type = pieceLayout[row][col];
                 if (!type.HasValue) continue;
                 
-                PieceData data = pieceDatabase.GetPieceData(type.Value);
+                PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(type.Value);
                 Vector2 pos = new Vector2(
                     basePos.x + col * capturePieceWidth * (turn == Turn.先手 ? 1f : -1f),
                     basePos.y + row * capturePieceHeight * (turn == Turn.先手 ? -1f : 1f)

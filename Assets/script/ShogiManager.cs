@@ -9,9 +9,9 @@ public class ShogiManager : MonoBehaviour
 {
     // シングルトン管理
     public static ShogiManager Instance { get; private set; }
-
-    // ゲーム進行・状態管理
-    public Turn activePlayer; // 現在の手番（先手 or 後手）
+    
+    [Header("ゲーム進行・状態管理")]
+    [SerializeField] public Turn activePlayer; // 現在の手番（先手 or 後手）
     public PieceType[,] BoardState = new PieceType[9, 9]; // 盤面の状態を管理
     
     public GameObject curSelPiece; // 現在選択されている駒
@@ -44,6 +44,9 @@ public class ShogiManager : MonoBehaviour
 
     bool _isFastPromote; // 成駒の選択がされているか*/
     
+    [Header("駒のデータベース")]
+    [SerializeField] public PieceDatabase pieceDatabase;
+    
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -73,7 +76,8 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     private void AdvanceKifu()
     {
-        
+        // ここで現在の局面を記譜法に追加する処理を実装
+        //BoardStateを更新
     }
     
     /*void Start()

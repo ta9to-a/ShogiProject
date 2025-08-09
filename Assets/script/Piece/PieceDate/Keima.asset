@@ -17,3 +17,7 @@ MonoBehaviour:
   unpromotedGoteSprite: {fileID: 21300000, guid: 7c6aa74ef050247f2839dd5a0d4d3428, type: 3}
   promotedSenteSprite: {fileID: 21300000, guid: f3cdb6309454a45499a9b3d855bf0d30, type: 3}
   promotedGoteSprite: {fileID: 21300000, guid: 299040071511343158084c9d059bb82d, type: 3}
+  canStraightMove: 0
+  moveRange:
+  - {x: 1, y: 2}
+  - {x: -1, y: 2}
