@@ -1,5 +1,6 @@
 public enum PieceType
 {
+    None = -1,
     歩兵,
     香車,
     桂馬,

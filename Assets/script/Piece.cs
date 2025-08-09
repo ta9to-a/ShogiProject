@@ -52,6 +52,15 @@ public class Piece : MonoBehaviour
         // 駒の初期位置を設定
         SetPosition(position);
     }
+    
+    /// <summary>
+    /// 駒のポジションの設定
+    /// </summary>
+    public void SetPosition(Vector2Int pos)
+    {
+        _currentPos = pos;
+        transform.position = new Vector2(pos.x, pos.y);
+    }
 
     /// <summary>
     /// 駒の選択処理
@@ -95,20 +104,11 @@ public class Piece : MonoBehaviour
             return;
         }
         // 駒の移動処理
-        SetPosition(clickedPoint);
+        ShogiManager.Instance.MovePiece(_currentPos, clickedPoint);
         // 成駒動作のチェック
 
         // 駒の状態を更新
         ShogiManager.Instance.EndMovePhase();
-    }
-    
-    /// <summary>
-    /// 駒のポジションの設定
-    /// </summary>
-    private void SetPosition(Vector2Int pos)
-    {
-        _currentPos = pos;
-        transform.position = new Vector2(pos.x, pos.y);
     }
     
     /// <summary>
@@ -126,14 +126,46 @@ public class Piece : MonoBehaviour
         List<Vector2Int> movablePositions = new List<Vector2Int>();
         foreach (var offset in moveRange)
         {
-            Vector2Int newPos = _currentPos + offset * _moveDistance;
-            // ボードの範囲外チェック
-            if (newPos.x < boardMin || newPos.x > boardMax || newPos.y < boardMin || newPos.y > boardMax) continue;
+            if (!pieceData.canStraightMove)
+            {
+                Vector2Int newPos = _currentPos + offset * _moveDistance; // 移動先の座標を計算
+                if (newPos.x < boardMin || newPos.x > boardMax || newPos.y < boardMin || newPos.y > boardMax) continue;
             
-            // すでに駒があるかチェック
-            PieceType checkPiece = ShogiManager.Instance.BoardState[newPos.x - 1, newPos.y - 1];
+                // すでに駒があるかチェック
+                PieceType checkPiece = ShogiManager.Instance.GetPieceTypeAt(newPos);
+                Piece checkPieceObj = ShogiManager.Instance.GetPieceAt(newPos);
             
-            movablePositions.Add(newPos);
+                // 空マス or 相手の駒なら移動可能
+                if (checkPiece == PieceType.None ||
+                    (checkPieceObj != null && checkPieceObj._pieceTurn != _pieceTurn))
+                {
+                    movablePositions.Add(newPos);
+                }
+            }
+            else
+            {
+                // 直線移動の場合、移動可能なマス目を全てチェック
+                for (int i = 1; i < 9; i++)
+                {
+                    Vector2Int newPos = _currentPos + offset * i * _moveDistance; // 移動先の座標を計算
+                    if (newPos.x < boardMin || newPos.x > boardMax || newPos.y < boardMin || newPos.y > boardMax) break;
+
+                    // すでに駒があるかチェック
+                    PieceType checkPiece = ShogiManager.Instance.GetPieceTypeAt(newPos);
+                    Piece checkPieceObj = ShogiManager.Instance.GetPieceAt(newPos);
+
+                    // 空マス or 相手の駒なら移動可能
+                    if (checkPiece == PieceType.None)
+                    {
+                        movablePositions.Add(newPos);
+                    }
+                    else if (checkPieceObj != null && checkPieceObj._pieceTurn != _pieceTurn)
+                    {
+                        movablePositions.Add(newPos);
+                        break; // 相手の駒がある場合は処理の終了
+                    }
+                }
+            }
         }
 
         return movablePositions;

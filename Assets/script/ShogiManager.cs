@@ -13,6 +13,7 @@ public class ShogiManager : MonoBehaviour
     [Header("ゲーム進行・状態管理")]
     [SerializeField] public Turn activePlayer; // 現在の手番（先手 or 後手）
     public PieceType[,] BoardState = new PieceType[9, 9]; // 盤面の状態を管理
+    public Dictionary<Vector2Int, Piece> PieceObjects = new Dictionary<Vector2Int, Piece>();
     
     public GameObject curSelPiece; // 現在選択されている駒
     
@@ -56,6 +57,14 @@ public class ShogiManager : MonoBehaviour
         }
         
         Instance = this;
+        
+        for (int x = 0; x < 9; x++)
+        {
+            for (int y = 0; y < 9; y++)
+            {
+                BoardState[x, y] = PieceType.None;
+            }
+        }
     }
     
     /// <summary>
@@ -76,8 +85,55 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     private void AdvanceKifu()
     {
-        // ここで現在の局面を記譜法に追加する処理を実装
-        //BoardStateを更新
+        
+    }
+    
+    /// <summary>
+    /// 盤面に駒を配置する
+    /// </summary>
+    public void PlacePiece(Vector2Int pos, PieceType type, Piece pieceObj)
+    {
+        BoardState[pos.x - 1, pos.y - 1] = type;
+        PieceObjects[pos] = pieceObj;
+    }
+
+    /// <summary>
+    /// 盤面から駒を削除する
+    /// </summary>
+    public void RemovePiece(Vector2Int pos)
+    {
+        BoardState[pos.x - 1, pos.y - 1] = PieceType.None;
+        PieceObjects.Remove(pos);
+    }
+    
+    /// <summary>
+    /// 駒を指定した位置に移動する
+    /// </summary>
+    public void MovePiece(Vector2Int from, Vector2Int to)
+    {
+        // 盤面外や不正座標のチェックも必要なら追加
+        Piece movingPiece = PieceObjects[from];
+        PieceType type = BoardState[from.x - 1, from.y - 1];
+
+        RemovePiece(from); // 元の場所を空に
+        PlacePiece(to, type, movingPiece); // 新しい場所に設置
+        movingPiece.SetPosition(to); // Piece側の位置も更新
+    }
+
+    /// <summary>
+    /// 指定した位置にある駒を取得する
+    /// </summary>
+    public Piece GetPieceAt(Vector2Int pos)
+    {
+        return PieceObjects.ContainsKey(pos) ? PieceObjects[pos] : null;
+    }
+
+    /// <summary>
+    /// 指定した位置にある駒の種類を取得する
+    /// </summary>
+    public PieceType GetPieceTypeAt(Vector2Int pos)
+    {
+        return BoardState[pos.x - 1, pos.y - 1];
     }
     
     /*void Start()
