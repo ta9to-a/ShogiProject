@@ -12,8 +12,9 @@ public class ShogiManager : MonoBehaviour
     
     [Header("ゲーム進行・状態管理")]
     [SerializeField] public Turn activePlayer; // 現在の手番（先手 or 後手）
-    public PieceType[,] BoardState = new PieceType[9, 9]; // 盤面の状態を管理
-    public Dictionary<Vector2Int, Piece> PieceObjects = new Dictionary<Vector2Int, Piece>();
+    
+    private PieceType[,] _boardState = new PieceType[9, 9]; // 盤面の状態を管理
+    private Dictionary<Vector2Int, Piece> _pieceObjects = new (); // 盤面上の駒オブジェクトを管理（座標 -> 駒オブジェクト）
     
     public GameObject curSelPiece; // 現在選択されている駒
     
@@ -22,10 +23,12 @@ public class ShogiManager : MonoBehaviour
     public int[] goteCapturedPieceType = new int[7];    // 後手の持ち駒の種類ごとの数
 
     /*// 二歩チェック用の歩の列情報
-    public static bool[] SenteFuPosition = new bool[9]; // 先手の歩の列状態
-    public static bool[] GoteFuPosition = new bool[9];  // 後手の歩の列状態
+    public bool[] SenteFuPosition = new bool[9]; // 先手の歩の列状態
+    public bool[] GoteFuPosition = new bool[9];  // 後手の歩の列状態*/
     
-    // ハイライトの管理
+    private int _recMoveCount = 0; // 手数のカウント
+    
+    /*// ハイライトの管理
     [SerializeField] GameObject highlightPrefab; // 駒のハイライト用プレハブ
     List<GameObject> _activeHighlights = new();
     SpriteRenderer _sr;
@@ -62,7 +65,7 @@ public class ShogiManager : MonoBehaviour
         {
             for (int y = 0; y < 9; y++)
             {
-                BoardState[x, y] = PieceType.None;
+                _boardState[x, y] = PieceType.None;
             }
         }
     }
@@ -70,10 +73,10 @@ public class ShogiManager : MonoBehaviour
     /// <summary>
     /// 局面の移動フェーズを終了し、次の手番に移行
     /// </summary>
-    public void EndMovePhase()
+    public void EndTurnPhase()
     {
         // 局面の保存
-        AdvanceKifu();
+        AddKifuEntry();
         
         // 手番を切り替える
         curSelPiece = null;
@@ -83,27 +86,9 @@ public class ShogiManager : MonoBehaviour
     /// <summary>
     /// 現在の局面を記譜法に追加
     /// </summary>
-    private void AdvanceKifu()
+    private void AddKifuEntry()
     {
-        
-    }
-    
-    /// <summary>
-    /// 盤面に駒を配置する
-    /// </summary>
-    public void PlacePiece(Vector2Int pos, PieceType type, Piece pieceObj)
-    {
-        BoardState[pos.x - 1, pos.y - 1] = type;
-        PieceObjects[pos] = pieceObj;
-    }
-
-    /// <summary>
-    /// 盤面から駒を削除する
-    /// </summary>
-    public void RemovePiece(Vector2Int pos)
-    {
-        BoardState[pos.x - 1, pos.y - 1] = PieceType.None;
-        PieceObjects.Remove(pos);
+        _recMoveCount++;
     }
     
     /// <summary>
@@ -112,20 +97,38 @@ public class ShogiManager : MonoBehaviour
     public void MovePiece(Vector2Int from, Vector2Int to)
     {
         // 盤面外や不正座標のチェックも必要なら追加
-        Piece movingPiece = PieceObjects[from];
-        PieceType type = BoardState[from.x - 1, from.y - 1];
+        Piece movingPiece = _pieceObjects[from];
+        PieceType type = _boardState[from.x - 1, from.y - 1];
 
         RemovePiece(from); // 元の場所を空に
         PlacePiece(to, type, movingPiece); // 新しい場所に設置
         movingPiece.SetPosition(to); // Piece側の位置も更新
     }
+    
+    /// <summary>
+    /// 盤面に駒を配置する
+    /// </summary>
+    public void PlacePiece(Vector2Int pos, PieceType type, Piece pieceObj)
+    {
+        _boardState[pos.x - 1, pos.y - 1] = type;
+        _pieceObjects[pos] = pieceObj;
+    }
 
+    /// <summary>
+    /// 盤面から駒を削除する
+    /// </summary>
+    public void RemovePiece(Vector2Int pos)
+    {
+        _boardState[pos.x - 1, pos.y - 1] = PieceType.None;
+        _pieceObjects.Remove(pos);
+    }
+    
     /// <summary>
     /// 指定した位置にある駒を取得する
     /// </summary>
     public Piece GetPieceAt(Vector2Int pos)
     {
-        return PieceObjects.ContainsKey(pos) ? PieceObjects[pos] : null;
+        return _pieceObjects.ContainsKey(pos) ? _pieceObjects[pos] : null;
     }
 
     /// <summary>
@@ -133,7 +136,7 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public PieceType GetPieceTypeAt(Vector2Int pos)
     {
-        return BoardState[pos.x - 1, pos.y - 1];
+        return _boardState[pos.x - 1, pos.y - 1];
     }
     
     /*void Start()

@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Fu
   m_EditorClassIdentifier: 
   pieceType: 0
+  promotedType: 8
+  canPromote: 1
   unpromotedSenteSprite: {fileID: 21300000, guid: 1a4723c2c788f4a3da091c98bf882044, type: 3}
   unpromotedGoteSprite: {fileID: 21300000, guid: 8260523424970421f9f87edf2e834753, type: 3}
   promotedSenteSprite: {fileID: 21300000, guid: 4acd917d9b49f432ba7d12bb6a69ed30, type: 3}

@@ -3,8 +3,11 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "NewPieceData", menuName = "Shogi/Piece Data")]
 public class PieceData : ScriptableObject
 {
-    [Tooltip("駒の種類")]
+    [Header("駒の種類")]
     public PieceType pieceType;
+    public PieceType promotedType;   // 成駒
+    [Tooltip("成り駒が可能かどうか")]
+    public bool canPromote;
 
     [Header("スプライト")]
     [Tooltip("先手の通常スプライト")]

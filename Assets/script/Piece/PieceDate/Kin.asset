@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: Kin
   m_EditorClassIdentifier: 
   pieceType: 4
+  promotedType: -1
+  canPromote: 0
   unpromotedSenteSprite: {fileID: 21300000, guid: 813a25a6054b64cc0a3994f672d3d607, type: 3}
   unpromotedGoteSprite: {fileID: 21300000, guid: 0b5e6dedb7eb8467c88401bd5268d043, type: 3}
   promotedSenteSprite: {fileID: 21300000, guid: 5085addaa8fe742f9a4aed4bdbb56736, type: 3}
