@@ -11,6 +11,8 @@ public class Piece : MonoBehaviour
     
     private Vector2Int _currentPos;
     private int _moveDistance;
+    private bool _isPromoted;
+    private bool _wasPromote;
 
     private Sprite _currentSprite;
     private Sprite _unpromSprite;
@@ -48,6 +50,9 @@ public class Piece : MonoBehaviour
             transform.rotation = Quaternion.Euler(0, 0, 180);
             _moveDistance = -1;
         }
+        
+        _isPromoted = false;
+        _wasPromote = false;
 
         // 駒の初期位置を設定
         SetPosition(position);
@@ -108,18 +113,35 @@ public class Piece : MonoBehaviour
 
         // 駒の成駒処理
         PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
-        if (pieceData.canPromote)
+        if (pieceData.promotionType != PieceData.PromotionType.None && !_isPromoted)
         {
-            if (clickedPoint.y >= 7 && _pieceTurn == Turn.先手 ||clickedPoint.y <= 3 && _pieceTurn == Turn.後手)
+            bool nowInEnemyCamp = 
+                (_pieceTurn == Turn.先手 && clickedPoint.y >= 7) ||
+                (_pieceTurn == Turn.後手 && clickedPoint.y <= 3);
+            
+            bool leftEnemyCampThisTurn = _wasPromote && !nowInEnemyCamp;
+            
+            if (nowInEnemyCamp || leftEnemyCampThisTurn)
             {
+                // 成るかどうかのUIを表示
                 bool isPromote = await PromotionUIManager.Instance.ShowAsync(_currentPos, _unpromSprite, _promSprite);
                 if (isPromote)
                 {
                     // 成る処理
+                    _isPromoted = true;
+                    _pieceType = pieceData.promotedType; // 駒の種類を更新
+                    
                     _currentSprite = _promSprite;
                     GetComponent<SpriteRenderer>().sprite = _currentSprite;
-                    _pieceType = pieceData.promotedType; // 駒の種類を更新
                     Debug.Log("駒が成りました: " + _pieceType);
+                }
+                else if (nowInEnemyCamp)
+                {
+                    _wasPromote = true; // 成り駒の状態を記録
+                }
+                else
+                {
+                    _wasPromote = false;
                 }
             }
         }

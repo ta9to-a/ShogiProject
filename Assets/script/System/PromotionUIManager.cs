@@ -25,6 +25,13 @@ public class PromotionUIManager : MonoBehaviour
         panel.SetActive(false);
     }
 
+    /// <summary>
+    /// 駒の成り・不成のUIを表示する
+    /// </summary>
+    /// <param name="currentPos">駒の座標</param>
+    /// <param name="unpromSprite">不成スプライト</param>
+    /// <param name="promSprite">成駒スプライト</param>
+    /// <returns></returns>
     public async UniTask<bool> ShowAsync(Vector2Int currentPos, Sprite unpromSprite, Sprite promSprite)
     {
         promoteButton.GetComponent<Image>().sprite = promSprite;

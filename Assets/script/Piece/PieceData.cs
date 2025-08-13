@@ -5,9 +5,9 @@ public class PieceData : ScriptableObject
 {
     [Header("駒の種類")]
     public PieceType pieceType;
-    public PieceType promotedType;   // 成駒
-    [Tooltip("成り駒が可能かどうか")]
-    public bool canPromote;
+    public PieceType promotedType;
+    [Tooltip("駒の成りタイプ")]
+    public PromotionType promotionType;
 
     [Header("スプライト")]
     [Tooltip("先手の通常スプライト")]
@@ -26,4 +26,12 @@ public class PieceData : ScriptableObject
     public bool canStraightMove;
     [Tooltip("駒の移動可能なマスのリスト")]
     public Vector2Int[] moveRange;
+    
+    public enum PromotionType
+    {
+        None,
+        成金,
+        龍馬,
+        龍王
+    }
 }
