@@ -110,9 +110,17 @@ public class Piece : MonoBehaviour
         PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
         if (pieceData.canPromote)
         {
-            if (clickedPoint.y == 7 && _pieceTurn == Turn.先手 ||clickedPoint.y == 3 && _pieceTurn == Turn.後手)
+            if (clickedPoint.y >= 7 && _pieceTurn == Turn.先手 ||clickedPoint.y <= 3 && _pieceTurn == Turn.後手)
             {
-                // 成るかどうかの確認
+                bool isPromote = await PromotionUIManager.Instance.ShowAsync(_currentPos, _unpromSprite, _promSprite);
+                if (isPromote)
+                {
+                    // 成る処理
+                    _currentSprite = _promSprite;
+                    GetComponent<SpriteRenderer>().sprite = _currentSprite;
+                    _pieceType = pieceData.promotedType; // 駒の種類を更新
+                    Debug.Log("駒が成りました: " + _pieceType);
+                }
             }
         }
 
