@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Debug = System.Diagnostics.Debug;
 
 [CreateAssetMenu(fileName = "PieceDatabase", menuName = "Shogi/PieceDatabase")]
 public class PieceDatabase : ScriptableObject
@@ -28,7 +27,7 @@ public class PieceDatabase : ScriptableObject
         if (_pieceDataDict == null)
         {
             OnEnable();
-            Debug.Assert(_pieceDataDict != null,
+            UnityEngine.Debug.Assert(_pieceDataDict != null,
                 "PieceDatabaseが初期化されていません。OnEnableメソッドを確認してください。");
         }
         
