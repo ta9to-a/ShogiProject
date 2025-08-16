@@ -21,3 +21,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 2286448c4736d4a7cb8394e61858d7d3, type: 2}
   - {fileID: 11400000, guid: 59218b2c5d2b34253bc23b84a3785bb9, type: 2}
   - {fileID: 11400000, guid: b20891d96a87643aba9935dbfecd4cdc, type: 2}
+  promotionPieceDataList:
+  - {fileID: 11400000, guid: a1b2c3d4e5f6789012345678901234ab, type: 2}
+  - {fileID: 11400000, guid: b2c3d4e5f6789012345678901234abcd, type: 2}
+  - {fileID: 11400000, guid: c3d4e5f6789012345678901234abcdef, type: 2}
