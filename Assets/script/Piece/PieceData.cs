@@ -30,8 +30,8 @@ public class PieceData : ScriptableObject
     public enum PromotionType
     {
         None,
-        成金,
-        龍馬,
-        龍王
+        Gold,  // 成金 - 歩・香・桂・銀の成駒共通の動き
+        龍馬,  // 角行の成駒
+        龍王   // 飛車の成駒
     }
 }

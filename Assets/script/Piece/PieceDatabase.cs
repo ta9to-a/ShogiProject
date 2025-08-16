@@ -7,11 +7,17 @@ using Debug = System.Diagnostics.Debug;
 public class PieceDatabase : ScriptableObject
 {
     [SerializeField] public List<PieceData> pieceDataList;
+    [SerializeField] public List<PieceData> promotionPieceDataList;
     private Dictionary<PieceType, PieceData> _pieceDataDict;
+    private Dictionary<PieceData.PromotionType, PieceData> _promotionPieceDataDict;
 
     private void OnEnable()
     {
         _pieceDataDict = pieceDataList.ToDictionary(data => data.pieceType);
+        if (promotionPieceDataList != null)
+        {
+            _promotionPieceDataDict = promotionPieceDataList.ToDictionary(data => data.promotionType);
+        }
     }
     
     /// <summary>
@@ -28,5 +34,23 @@ public class PieceDatabase : ScriptableObject
         
         _pieceDataDict.TryGetValue(pieceType, out PieceData data);
         return data;
+    }
+    
+    /// <summary>
+    /// 成駒タイプから関連するデータを取得する
+    /// </summary>
+    public PieceData GetPromotionPieceData(PieceData.PromotionType promotionType)
+    {
+        if (_promotionPieceDataDict == null)
+        {
+            OnEnable();
+        }
+        
+        if (_promotionPieceDataDict != null && _promotionPieceDataDict.TryGetValue(promotionType, out PieceData data))
+        {
+            return data;
+        }
+        
+        return null;
     }
 }

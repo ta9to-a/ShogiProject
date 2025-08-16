@@ -151,6 +151,50 @@ public class Piece : MonoBehaviour
     }
 
     /// <summary>
+    /// 駒の移動範囲を取得する（成駒の場合は成駒タイプに応じた移動範囲を返す）
+    /// </summary>
+    /// <returns>移動範囲</returns>
+    private Vector2Int[] GetMoveRange()
+    {
+        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
+        
+        // 成駒でpromotionTypeが設定されている場合、成駒データを使用
+        if (_isPromoted && pieceData.promotionType != PieceData.PromotionType.None)
+        {
+            PieceData promotionData = ShogiManager.Instance.pieceDatabase.GetPromotionPieceData(pieceData.promotionType);
+            if (promotionData != null)
+            {
+                return promotionData.moveRange;
+            }
+        }
+        
+        // 通常の場合は自分のmoveRangeを返す
+        return pieceData.moveRange;
+    }
+
+    /// <summary>
+    /// 駒が直線移動可能かを取得する（成駒の場合は成駒タイプに応じた設定を返す）
+    /// </summary>
+    /// <returns>直線移動可能かどうか</returns>
+    private bool GetCanStraightMove()
+    {
+        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
+        
+        // 成駒でpromotionTypeが設定されている場合、成駒データを使用
+        if (_isPromoted && pieceData.promotionType != PieceData.PromotionType.None)
+        {
+            PieceData promotionData = ShogiManager.Instance.pieceDatabase.GetPromotionPieceData(pieceData.promotionType);
+            if (promotionData != null)
+            {
+                return promotionData.canStraightMove;
+            }
+        }
+        
+        // 通常の場合は自分のcanStraightMoveを返す
+        return pieceData.canStraightMove;
+    }
+
+    /// <summary>
     /// 移動可能なマス目をチェックする
     /// </summary>
     /// <returns>移動可能なマス目のリスト</returns>
@@ -159,13 +203,13 @@ public class Piece : MonoBehaviour
         const int boardMin = 1;
         const int boardMax = 9;
 
-        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
-        Vector2Int[] moveRange = pieceData.moveRange;
+        Vector2Int[] moveRange = GetMoveRange();
+        bool canStraightMove = GetCanStraightMove();
 
         List<Vector2Int> movablePositions = new List<Vector2Int>();
         foreach (var offset in moveRange)
         {
-            if (!pieceData.canStraightMove)
+            if (!canStraightMove)
             {
                 Vector2Int newPos = _currentPos + offset * _moveDistance; // 移動先の座標を計算
                 if (newPos.x < boardMin || newPos.x > boardMax || newPos.y < boardMin || newPos.y > boardMax) continue;
