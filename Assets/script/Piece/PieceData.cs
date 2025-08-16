@@ -26,12 +26,4 @@ public class PieceData : ScriptableObject
     public bool canStraightMove;
     [Tooltip("駒の移動可能なマスのリスト")]
     public Vector2Int[] moveRange;
-    
-    public enum PromotionType
-    {
-        None,
-        成金,
-        龍馬,
-        龍王
-    }
 }

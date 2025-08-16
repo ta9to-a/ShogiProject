@@ -54,16 +54,15 @@ public class PromotionUIManager : MonoBehaviour
             Quaternion.identity :
             Quaternion.Euler(0f, 0f, 180f);
         
+        await UniTask.Yield();
         panel.SetActive(true);
-        await UniTask.WaitUntil(() => Input.GetMouseButtonUp(0));
-        
+          
         // ボタンのクリックイベントを設定
         promoteButton.onClick.AddListener(() => _tcs.TrySetResult(true));
         unpromoteButton.onClick.AddListener(() => _tcs.TrySetResult(false));
         
         bool result = await _tcs.Task; // 結果待ち
         
-        // クリックイベントの削除
         promoteButton.onClick.RemoveAllListeners();
         unpromoteButton.onClick.RemoveAllListeners();
         

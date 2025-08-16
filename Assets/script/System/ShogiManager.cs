@@ -11,7 +11,7 @@ public class ShogiManager : MonoBehaviour
     public static ShogiManager Instance { get; private set; }
     
     [Header("ゲーム進行・状態管理")]
-    [SerializeField] public Turn activePlayer; // 現在の手番（先手 or 後手）
+    public Turn activePlayer; // 現在の手番（先手 or 後手）
     
     private PieceType[,] _boardState = new PieceType[9, 9]; // 盤面の状態を管理
     private Dictionary<Vector2Int, Piece> _pieceObjects = new (); // 盤面上の駒オブジェクトを管理（座標 -> 駒オブジェクト）
@@ -35,10 +35,6 @@ public class ShogiManager : MonoBehaviour
     
     public static bool CanSelect; // 選択状況を管理するフラグ
 
-    [SerializeField] GameObject buttons;
-    [SerializeField] Button trueButton;
-    [SerializeField] Button falseButton;
-
     private bool? _playerChoice;
     private Camera _camera;
 
@@ -50,17 +46,20 @@ public class ShogiManager : MonoBehaviour
     
     [Header("駒のデータベース")]
     [SerializeField] public PieceDatabase pieceDatabase;
+    [SerializeField] public PromotionDatabase promotionDatabase;
+    
     
     private void Awake()
     {
+        // シングルトンの初期化
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        
         Instance = this;
         
+        // 盤面の初期化
         for (int x = 0; x < 9; x++)
         {
             for (int y = 0; y < 9; y++)
@@ -150,61 +149,6 @@ public class ShogiManager : MonoBehaviour
         falseButton.onClick.AddListener(() => Choose(false));
 
         shogiEngMan.SetStartPosition();
-    }
-    
-    //----------------------------------
-    //------------選択中の処理------------
-    //----------------------------------
-    {
-        // マウス座標をワールド座標に変換
-        Vector3 mousePosition = Input.mousePosition;
-        if (Camera.main != null)
-        {
-            Vector3 worldMousePos = Camera.main.ScreenToWorldPoint(mousePosition);
-    
-            // 駒レイヤーでの当たり判定
-            LayerMask pieceLayer = LayerMask.GetMask("Piece");
-            Collider2D hitPiece = Physics2D.OverlapPoint(worldMousePos, pieceLayer);
-    
-            // 駒がクリックされた場合は何もしない
-            if (hitPiece != null) return;
-        }
-
-        // 盤面がクリックされた場合、駒を設置
-        if (CurrentSelectedPiece != null && CurrentSelectedPiece.isSelect)
-        {
-            // 盤面のクリック処理を実行
-            CurrentSelectedPiece.OnBoardClick();
-        }
-        
-        // 持ち駒が選択されている場合は、持ち駒配置処理を実行
-        if (HeldPieceManager.FoundPiece != null && HeldPieceManager.IsHeldPieceSelected)
-        {
-            HeldPieceManager findObjectOfType = FindObjectOfType<HeldPieceManager>();
-            if (findObjectOfType != null)
-            {
-                // 持ち駒配置処理を実行
-                Piece.PieceId currentPieceType = HeldPieceManager.SelectedPieceType;
-                findObjectOfType.SelectedHeldPiece(HeldPieceManager.FoundPiece, currentPieceType);
-            }
-        }
-    }
-    
-    public void ClearPieceSelection()
-    {
-        if (CurrentSelectedPiece != null)
-        {
-            CurrentSelectedPiece.isSelect = false;
-            CurrentSelectedPiece = null;
-            ClearHighlights();
-        }
-    }
-
-    public void ClearHeldPieceSelection()
-    {
-        HeldPieceManager.IsHeldPieceSelected = false;
-        HeldPieceManager.FoundPiece = null;
-        ClearHighlights();
     }
     
     //----------------------------------
@@ -517,53 +461,5 @@ public class ShogiManager : MonoBehaviour
             if (highlight != null) Destroy(highlight);
         }
         _activeHighlights.Clear();
-    }
-
-    //----------------------------------
-    //---------成駒選択の処理------------
-    //----------------------------------
-    void Choose(bool choice)
-    {
-        _playerChoice = choice;
-        buttons.SetActive(false);
-    }
-    
-    public async UniTask<bool> WaitForPlayerChoiceAsync(int pieceType, Vector3 pos)
-    {
-        //　選択画面を表示
-        buttons.SetActive(true);
-        CanSelect = false;
-        
-        Image promoteImage = trueButton.GetComponentInChildren<Image>();
-        Image defaltImage = falseButton.GetComponentInChildren<Image>();
-
-        promoteImage.sprite = promotedSenteSprites[pieceType];
-        defaltImage.sprite = defaultSenteSprites[pieceType];
-        
-        // RectTransformを取得
-        RectTransform rectTransform = buttons.GetComponent<RectTransform>();
-    
-        // ワールド座標をスクリーン座標に変換
-        Vector3 screenPos = _camera.WorldToScreenPoint(pos);
-    
-        // スクリーン座標をCanvas内の座標に変換
-        Vector2 localPoint;
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(
-            buttons.transform.parent.GetComponent<RectTransform>(),
-            screenPos,
-            null, // Canvasがスクリーンスペースオーバーレイの場合はnull
-            out localPoint
-        );
-    
-        // RectTransformの位置を設定
-        rectTransform.anchoredPosition = localPoint;
-        rectTransform.rotation = ActivePlayer ? Quaternion.Euler(0f, 0f, 0f) : Quaternion.Euler(0f, 0f, 180f);
-    
-        _playerChoice = null;
-    
-        await UniTask.WaitUntil(() => _playerChoice.HasValue);
-    
-        // 選択結果を返す
-        return _playerChoice != null && _playerChoice.Value;
     }*/
 }

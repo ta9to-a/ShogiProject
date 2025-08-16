@@ -565,19 +565,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 558494463}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: ShogiManager, Assembly-CSharp
-        m_MethodName: DemoteObjet
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &558494463
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -916,19 +904,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 818408946}
   m_OnClick:
     m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 0}
-        m_TargetAssemblyTypeName: ShogiManager, Assembly-CSharp
-        m_MethodName: PromoteObject
-        m_Mode: 1
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
+      m_Calls: []
 --- !u!114 &818408946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1276,6 +1252,7 @@ MonoBehaviour:
   senteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
   goteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
   pieceDatabase: {fileID: 11400000, guid: 3e1aa3e3e9ca64414906e8f9c17b3ff6, type: 2}
+  promotionDatabase: {fileID: 11400000, guid: d655c5a1b11bc4452aba95807e72800f, type: 2}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pieceType: 6
   promotedType: 13
-  promotionType: 3
+  promotionType: 2
   unpromotedSenteSprite: {fileID: 21300000, guid: 3bceaf763a4cb4472ac2f9aa475662ce, type: 3}
   unpromotedGoteSprite: {fileID: 21300000, guid: c1a880ce330264585acdae1359625f9b, type: 3}
   promotedSenteSprite: {fileID: 21300000, guid: 9dcea52f96eee4058b9fc69861d1533f, type: 3}

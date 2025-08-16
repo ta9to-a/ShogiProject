@@ -6,13 +6,13 @@ using Cysharp.Threading.Tasks;
 
 public class Piece : MonoBehaviour
 {
-    private PieceType _pieceType;
-    private Turn _pieceTurn;
+    private PieceType _pieceType;   // 駒の種類
+    private Turn _pieceTurn;        // 駒のターン
     
-    private Vector2Int _currentPos;
-    private int _moveDistance;
-    private bool _isPromoted;
-    private bool _wasPromote;
+    private Vector2Int _currentPos; // 駒の現在位置
+    private int _moveDistance;      // 駒の移動方向
+    private bool _isPromoted;       // 駒が成っているかどうか
+    private bool _wasInEnemyCamp;   // 前のターン、敵陣にいたかどうか
 
     private Sprite _currentSprite;
     private Sprite _unpromSprite;
@@ -52,7 +52,7 @@ public class Piece : MonoBehaviour
         }
         
         _isPromoted = false;
-        _wasPromote = false;
+        _wasInEnemyCamp = false;
 
         // 駒の初期位置を設定
         SetPosition(position);
@@ -95,8 +95,10 @@ public class Piece : MonoBehaviour
     /// </summary>
     private async void MovePiece()
     {
+        // 駒の動きを取得
+        Vector2Int[] moves = GetMoveRange();
         // 移動可能なマス目の取得
-        List<Vector2Int> checkMovablePositions = CheckMovablePositions();
+        List<Vector2Int> checkMovablePositions = CheckMovablePositions(moves);
         // クリックされるまで待つ
         Vector2Int clickedPoint = await WaitForMouseClick();
 
@@ -107,19 +109,26 @@ public class Piece : MonoBehaviour
             ShogiManager.Instance.curSelPiece = null; // 駒の選択を解除
             return;
         }
+        
+        if (ShogiManager.Instance.GetPieceAt(clickedPoint) != null)
+        {
+            Debug.Log("駒を捕獲しました: " + ShogiManager.Instance.GetPieceAt(clickedPoint)._pieceType);
+        }
 
         // 駒の移動処理
         ShogiManager.Instance.MovePiece(_currentPos, clickedPoint);
 
         // 駒の成駒処理
         PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
-        if (pieceData.promotionType != PieceData.PromotionType.None && !_isPromoted)
+        if (pieceData.promotionType != PromotionType.None && !_isPromoted)
         {
+            // 現在、敵陣にいるかどうか
             bool nowInEnemyCamp = 
                 (_pieceTurn == Turn.先手 && clickedPoint.y >= 7) ||
                 (_pieceTurn == Turn.後手 && clickedPoint.y <= 3);
             
-            bool leftEnemyCampThisTurn = _wasPromote && !nowInEnemyCamp;
+            // 前のターン、敵陣にいたかどうか
+            bool leftEnemyCampThisTurn = _wasInEnemyCamp && !nowInEnemyCamp;
             
             if (nowInEnemyCamp || leftEnemyCampThisTurn)
             {
@@ -137,11 +146,11 @@ public class Piece : MonoBehaviour
                 }
                 else if (nowInEnemyCamp)
                 {
-                    _wasPromote = true; // 成り駒の状態を記録
+                    _wasInEnemyCamp = true; // 成り駒の状態を記録
                 }
                 else
                 {
-                    _wasPromote = false;
+                    _wasInEnemyCamp = false;
                 }
             }
         }
@@ -151,19 +160,53 @@ public class Piece : MonoBehaviour
     }
 
     /// <summary>
+    /// 成り不成の状態を取得し、動き方を返す
+    /// </summary>
+    private Vector2Int[] GetMoveRange()
+    {
+        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
+        if (_isPromoted)
+        {
+            if (pieceData.promotionType != PromotionType.None)
+            {
+                PromotionData promotionData = 
+                    ShogiManager.Instance.promotionDatabase.GetPromotionData(pieceData.promotionType);
+
+                if (promotionData != null)
+                {
+                    if (promotionData.moveUpdate)   // 成り駒の移動範囲が更新される場合
+                    {
+                        return promotionData.moveRange;
+                    }
+                    else // 成り駒の移動範囲が追加される場合
+                    {
+                        Vector2Int[] baseRange = pieceData.moveRange;
+                        Vector2Int[] updatedRange = promotionData.moveRange;
+                        
+                        // 成り駒の移動範囲に基礎の移動範囲を追加
+                        List<Vector2Int> result = new List<Vector2Int>(baseRange);
+                        result.AddRange(updatedRange);
+                        return result.ToArray();
+                    }
+                }
+            }
+        }
+        return pieceData.moveRange;
+    }
+
+    /// <summary>
     /// 移動可能なマス目をチェックする
     /// </summary>
     /// <returns>移動可能なマス目のリスト</returns>
-    private List<Vector2Int> CheckMovablePositions()
+    private List<Vector2Int> CheckMovablePositions(Vector2Int[] moves)
     {
         const int boardMin = 1;
         const int boardMax = 9;
 
         PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(_pieceType);
-        Vector2Int[] moveRange = pieceData.moveRange;
 
         List<Vector2Int> movablePositions = new List<Vector2Int>();
-        foreach (var offset in moveRange)
+        foreach (var offset in moves)
         {
             if (!pieceData.canStraightMove)
             {
