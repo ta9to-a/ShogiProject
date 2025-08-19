@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f1c57e76be37401d83b2cbd543421be, type: 3}
   m_Name: Ryuo
   m_EditorClassIdentifier: 
-  promotionType: 3
+  promotionType: 2
   moveUpdate: 0
   moveRange:
   - {x: 1, y: 1}

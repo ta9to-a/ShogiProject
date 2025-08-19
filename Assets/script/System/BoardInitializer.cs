@@ -37,14 +37,14 @@ public class BoardInitializer : MonoBehaviour
 
     private void DefaultPosition()
     {
-        CreateLinePieces(PieceType.歩兵, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 3, 7);
-        CreateLinePieces(PieceType.香車, new[] { 1, 9 }, 1, 9);
-        CreateLinePieces(PieceType.桂馬, new[] { 2, 8 }, 1, 9);
-        CreateLinePieces(PieceType.銀将, new[] { 3, 7 }, 1, 9);
-        CreateLinePieces(PieceType.金将, new[] { 4, 6 }, 1, 9);
-        CreateMirroredPieces(PieceType.角行, new Vector2Int(2, 2), new Vector2Int(8, 8));
-        CreateMirroredPieces(PieceType.飛車, new Vector2Int(8, 2), new Vector2Int(2, 8));
-        CreateLinePieces(PieceType.玉将, new[] { 5 }, 1, 9);
+        CreateLinePieces(PieceType.歩兵, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 3, 7 , false);
+        CreateLinePieces(PieceType.香車, new[] { 1, 9 }, 1, 9 , false);
+        CreateLinePieces(PieceType.桂馬, new[] { 2, 8 }, 1, 9, false);
+        CreateLinePieces(PieceType.銀将, new[] { 3, 7 }, 1, 9, false);
+        CreateLinePieces(PieceType.金将, new[] { 4, 6 }, 1, 9, false);
+        CreateMirroredPieces(PieceType.角行, new Vector2Int(2, 2), new Vector2Int(8, 8), false);
+        CreateMirroredPieces(PieceType.飛車, new Vector2Int(8, 2), new Vector2Int(2, 8), false);
+        CreateLinePieces(PieceType.玉将, new[] { 5 }, 1, 9, false);
     }
 
     /// <summary>
@@ -54,13 +54,14 @@ public class BoardInitializer : MonoBehaviour
     /// <param name="posX">X座標の配列</param>
     /// <param name="sentePosY">先手のY座標</param>
     /// <param name="gotePosY">後手のY座標</param>
+    /// <param name="isPromoted">成るか否か</param>
     public void CreateLinePieces(PieceType pieceType,
-        int[] posX, int sentePosY, int gotePosY)
+        int[] posX, int sentePosY, int gotePosY , bool isPromoted)
     {
         foreach (int x in posX)
         {
-            CreatePiece(pieceType, new Vector2Int(x, sentePosY), Turn.先手);
-            CreatePiece(pieceType, new Vector2Int(x, gotePosY), Turn.後手);
+            CreatePiece(pieceType, new Vector2Int(x, sentePosY), Turn.先手, isPromoted);
+            CreatePiece(pieceType, new Vector2Int(x, gotePosY), Turn.後手, isPromoted);
         }
     }
 
@@ -70,16 +71,17 @@ public class BoardInitializer : MonoBehaviour
     /// <param name="pieceType">駒の種類</param>
     /// <param name="sentePos">先手の座標</param>
     /// <param name="gotePos">後手のY座標</param>
-    public void CreateMirroredPieces(PieceType pieceType, Vector2Int sentePos, Vector2Int gotePos)
+    /// <param name="isPromoted">成るか否か</param>
+    public void CreateMirroredPieces(PieceType pieceType, Vector2Int sentePos, Vector2Int gotePos , bool isPromoted)
     {
-        CreatePiece(pieceType, sentePos, Turn.先手);
-        CreatePiece(pieceType, gotePos, Turn.後手);
+        CreatePiece(pieceType, sentePos, Turn.先手 , isPromoted);
+        CreatePiece(pieceType, gotePos, Turn.後手 , isPromoted);
     }
 
     /// <summary>
     /// 駒の生成と配置
     /// </summary>
-    public void CreatePiece(PieceType pieceType, Vector2Int position, Turn turn)
+    public void CreatePiece(PieceType pieceType, Vector2Int position, Turn turn, bool isPromoted)
     {
         PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(pieceType);
         if (data == null)
@@ -112,7 +114,7 @@ public class BoardInitializer : MonoBehaviour
             parentObject = goteParent;
         }
         pieceObj.transform.SetParent(parentObject.transform, false);
-        pieceScript.ApplyStatePiece(pieceType, position, unpromotedSprite, promotedSprite);
+        pieceScript.ApplyStatePiece(pieceType, position, isPromoted, unpromotedSprite, promotedSprite);
         pieceObj.GetComponent<SpriteRenderer>().sortingOrder = 10;
         
         ShogiManager.Instance.PlacePiece(position, pieceType, pieceObj.GetComponent<Piece>());

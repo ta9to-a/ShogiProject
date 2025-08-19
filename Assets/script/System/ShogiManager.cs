@@ -69,6 +69,12 @@ public class ShogiManager : MonoBehaviour
         }
     }
     
+    public void CancelSelection()
+    {
+        curSelPiece = null;
+        //ClearHighlights();
+    }
+    
     /// <summary>
     /// 局面の移動フェーズを終了し、次の手番に移行
     /// </summary>
