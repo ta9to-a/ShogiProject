@@ -50,7 +50,7 @@ public class PromotionUIManager : MonoBehaviour
         );
         rectTransform.anchoredPosition = localPoint;
         // 先手と後手の向き設定
-        rectTransform.rotation = (ShogiManager.Instance.activePlayer == Turn.先手) ?
+        rectTransform.rotation = (ShogiManager.instance.activePlayer == Turn.先手) ?
             Quaternion.identity :
             Quaternion.Euler(0f, 0f, 180f);
         

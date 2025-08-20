@@ -8,7 +8,7 @@ using Cysharp.Threading.Tasks;
 public class ShogiManager : MonoBehaviour
 {
     // シングルトン管理
-    public static ShogiManager Instance { get; private set; }
+    public static ShogiManager instance { get; private set; }
     
     [Header("ゲーム進行・状態管理")]
     public Turn activePlayer; // 現在の手番（先手 or 後手）
@@ -52,12 +52,12 @@ public class ShogiManager : MonoBehaviour
     private void Awake()
     {
         // シングルトンの初期化
-        if (Instance != null && Instance != this)
+        if (instance != null && instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        Instance = this;
+        instance = this;
         
         // 盤面の初期化
         for (int x = 0; x < 9; x++)
@@ -101,7 +101,6 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public void MovePiece(Vector2Int from, Vector2Int to)
     {
-        // 盤面外や不正座標のチェックも必要なら追加
         Piece movingPiece = _pieceObjects[from];
         PieceType type = _boardState[from.x - 1, from.y - 1];
 
@@ -110,6 +109,42 @@ public class ShogiManager : MonoBehaviour
         movingPiece.SetPosition(to); // Piece側の位置も更新
     }
     
+    /// <summary>
+    /// 成駒に状態変化する際の処理
+    /// </summary>
+    public void PromotePiece(Vector2Int pos, PieceData pieceData)
+    {
+        Piece piece = GetPieceAt(pos);
+        if (piece == null) return; // 駒が存在しない場合は何もしない
+
+        // 成り駒の状態を設定
+        piece.PromotePiece(pieceData);
+        // 盤面の状態を更新
+        _boardState[pos.x - 1, pos.y - 1] = pieceData.promotedType;
+    }
+
+    /// <summary>
+    /// 駒を取得した際のゲーム状況の更新
+    /// </summary>
+    public void AddCapturedPiece(Vector2Int pos)
+    {
+        Piece enemyPiece = GetPieceAt(pos);
+        int[] pieceCount = (activePlayer == Turn.先手) ? senteCapturedPieceType : goteCapturedPieceType;
+        // 駒の種類を取得
+        PieceType pieceType = GetPieceTypeAt(pos);
+        if (pieceType != PieceType.None)
+        {
+            // 駒の種類に応じてカウントを増やす
+            pieceCount[(int)enemyPiece.basePieceType]++;
+            
+            // 駒オブジェクトを削除
+            Destroy(enemyPiece.gameObject);
+            Debug.Log(pieceType + "を捕獲しました。");
+        }
+        // 盤面から駒を削除
+        RemovePiece(pos);
+    }
+
     /// <summary>
     /// 盤面に駒を配置する
     /// </summary>

@@ -40,16 +40,16 @@ public class CapturePiece : MonoBehaviour
     public void SelectCapturePiece()
     {
         // 駒の選択処理
-        if (ShogiManager.Instance.activePlayer == _capturePieceTurn)
+        if (ShogiManager.instance.activePlayer == _capturePieceTurn)
         {
-            if (ShogiManager.Instance.curSelPiece == null)
+            if (ShogiManager.instance.curSelPiece == null)
             {
-                ShogiManager.Instance.curSelPiece = this.gameObject;
-                Debug.Log(ShogiManager.Instance.curSelPiece.name + "が選択されました");
+                ShogiManager.instance.curSelPiece = this.gameObject;
+                Debug.Log(ShogiManager.instance.curSelPiece.name + "が選択されました");
             }
             else
             {
-                ShogiManager.Instance.curSelPiece = null;
+                ShogiManager.instance.curSelPiece = null;
                 Debug.Log("駒の選択が解除されました");
             }
         }
@@ -58,13 +58,13 @@ public class CapturePiece : MonoBehaviour
     /// <summary>
     /// 持ち駒のビジュアルを状態に応じて更新する
     /// </summary>
-    private void UpdateVisualState()
+    public void UpdateVisualState()
     {
         int pieceIndex = (int)_capturePieceType;
         // 先手と後手の持ち駒の数を取得
         int currentCount = _capturePieceTurn == Turn.先手 ? 
-            ShogiManager.Instance.senteCapturedPieceType[pieceIndex] : 
-            ShogiManager.Instance.goteCapturedPieceType[pieceIndex];
+            ShogiManager.instance.senteCapturedPieceType[pieceIndex] : 
+            ShogiManager.instance.goteCapturedPieceType[pieceIndex];
         
         // スプライトの色を更新
         SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();

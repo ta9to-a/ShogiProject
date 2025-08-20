@@ -8,8 +8,6 @@ public class PromotionDatabase : ScriptableObject
 
     public PromotionData GetPromotionData(PromotionType type)
     {
-        PromotionData result = promotionDataList.Find(data => data.promotionType == type);
-        Debug.Log($"GetPromotionData: type={type}, result={(result != null ? result.name : "null")}");
-        return result;
+        return promotionDataList.Find(data => data.promotionType == type);
     }
 }
