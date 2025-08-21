@@ -22,9 +22,9 @@ public class ShogiManager : MonoBehaviour
     public int[] senteCapturedPieceType = new int[7];   // 先手の持ち駒の種類ごとの数
     public int[] goteCapturedPieceType = new int[7];    // 後手の持ち駒の種類ごとの数
 
-    /*// 二歩チェック用の歩の列情報
-    public bool[] SenteFuPosition = new bool[9]; // 先手の歩の列状態
-    public bool[] GoteFuPosition = new bool[9];  // 後手の歩の列状態*/
+    // 二歩チェック用の歩の列情報
+    public bool[] senteFuPosition = new bool[9]; // 先手の歩の列状態
+    public bool[] goteFuPosition = new bool[9];  // 後手の歩の列状態
     
     private int _recMoveCount = 0; // 手数のカウント
     
@@ -43,6 +43,9 @@ public class ShogiManager : MonoBehaviour
     [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
 
     bool _isFastPromote; // 成駒の選択がされているか*/
+    
+    [Header("持ち駒の管理")]
+    [SerializeField] public BoardInitializer boardInit; // 持ち駒
     
     [Header("駒のデータベース")]
     [SerializeField] public PieceDatabase pieceDatabase;
@@ -80,8 +83,12 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public void EndTurnPhase()
     {
+        // 二歩のチェック
+        CheckTwoFu();
+        
         // 局面の保存
         AddKifuEntry();
+        _recMoveCount++;
         
         // 手番を切り替える
         curSelPiece = null;
@@ -93,7 +100,29 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     private void AddKifuEntry()
     {
-        _recMoveCount++;
+        
+    }
+
+    /// <summary>
+    /// 歩の座標検知をし二歩のチェック
+    /// </summary>
+    private void CheckTwoFu()
+    {
+        for (int i = 0; i < 9; i++)
+        {
+            // その列に歩があるかチェック
+            for (int j = 0; j < 9; j++)
+            {
+                PieceType pieceType = _boardState[i, j];
+                if (pieceType == PieceType.歩兵)
+                {
+                    Piece fuObj = GetPieceAt(new Vector2Int(i, j));
+                    bool[] fuPosition = (fuObj.pieceTurn == Turn.先手) ? senteFuPosition : goteFuPosition;
+                    
+                    fuPosition[i] = true;
+                }
+            }
+        }
     }
     
     /// <summary>
@@ -134,8 +163,10 @@ public class ShogiManager : MonoBehaviour
         PieceType pieceType = GetPieceTypeAt(pos);
         if (pieceType != PieceType.None)
         {
+            PieceType basePieceType = enemyPiece.basePieceType;
             // 駒の種類に応じてカウントを増やす
-            pieceCount[(int)enemyPiece.basePieceType]++;
+            pieceCount[(int)basePieceType]++;
+            CapturePieceUIManager.instance.ApplyVisualUI(basePieceType);
             
             // 駒オブジェクトを削除
             Destroy(enemyPiece.gameObject);
@@ -143,6 +174,22 @@ public class ShogiManager : MonoBehaviour
         }
         // 盤面から駒を削除
         RemovePiece(pos);
+    }
+
+    /// <summary>
+    /// 持ち駒を指す
+    /// </summary>
+    public void SetCapturedPiece(PieceType pieceType, Vector2Int pos)
+    {
+        boardInit.CreatePiece(pieceType, pos, activePlayer, false);
+        
+        int[] capturedPieceType = (activePlayer == Turn.先手) ? 
+            senteCapturedPieceType : 
+            goteCapturedPieceType;
+        
+        capturedPieceType[(int)pieceType]--;
+        // 持ち駒のUIを更新
+        CapturePieceUIManager.instance.ApplyVisualUI(pieceType);
     }
 
     /// <summary>
@@ -494,7 +541,7 @@ public class ShogiManager : MonoBehaviour
         }
     }
 
-    // 駒の選択���クリア
+    // 駒の選択クリア
     public void ClearHighlights()
     {
         foreach (GameObject highlight in _activeHighlights)

@@ -1181,6 +1181,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1881146119}
+  - component: {fileID: 1881146120}
   m_Layer: 0
   m_Name: CapturePiece
   m_TagString: Untagged
@@ -1203,6 +1204,19 @@ Transform:
   m_Children: []
   m_Father: {fileID: 142689493}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1881146120
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1881146118}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4ca334b801f5242eb91c6652e922de2d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  capturePieceParent: []
 --- !u!1 &2035514902
 GameObject:
   m_ObjectHideFlags: 0
@@ -1251,6 +1265,9 @@ MonoBehaviour:
   curSelPiece: {fileID: 0}
   senteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
   goteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
+  senteFuPosition: 000000000000000000
+  goteFuPosition: 000000000000000000
+  boardInit: {fileID: 142689494}
   pieceDatabase: {fileID: 11400000, guid: 3e1aa3e3e9ca64414906e8f9c17b3ff6, type: 2}
   promotionDatabase: {fileID: 11400000, guid: d655c5a1b11bc4452aba95807e72800f, type: 2}
 --- !u!1660057539 &9223372036854775807

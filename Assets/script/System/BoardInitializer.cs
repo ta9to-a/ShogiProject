@@ -26,13 +26,13 @@ public class BoardInitializer : MonoBehaviour
     [SerializeField] private float capturePieceWidth = 1.5f; // 持ち駒の横幅
     [Tooltip("持ち駒の縦幅")]
     [SerializeField] private float capturePieceHeight = 1.0f; // 持ち駒の縦幅
-    private Dictionary<string, List<GameObject>> _cloneGroups = new(); // 駒のクローンをグループ
 
     void Start()
     {
         DefaultPosition();
         CreateCapturePieces(Turn.先手);
         CreateCapturePieces(Turn.後手);
+        CapturePieceUIManager.instance.Initialize();
     }
 
     private void DefaultPosition()
@@ -168,5 +168,7 @@ public class BoardInitializer : MonoBehaviour
         obj.tag = (turn == Turn.先手) ? "Sente" : "Gote";
 
         obj.GetComponent<CapturePiece>().ApplyStateCapturePiece(pieceData.pieceType, capPieceRenderer.sprite);
+        
+        CapturePieceUIManager.instance.capturePieceParent.Add(obj);
     }
 }
