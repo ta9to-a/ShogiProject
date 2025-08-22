@@ -9,7 +9,7 @@ public class Piece : MonoBehaviour
 {
     public PieceType basePieceType;         // 駒の基本種類
     private PieceType _currentPieceType;    // 駒の種類
-    private Turn _pieceTurn;                // 駒のターン（先手 or 後手）
+    public Turn pieceTurn;                // 駒のターン（先手 or 後手）
 
     private Vector2Int _currentPos;     // 駒の現在位置
     private int _moveDistance;          // 駒の移動方向（先手は1、後手は-1）
@@ -45,13 +45,13 @@ public class Piece : MonoBehaviour
         // 先手と後手のタグを設定
         if (transform.CompareTag("Sente"))
         {
-            _pieceTurn = Turn.先手;
+            pieceTurn = Turn.先手;
             transform.rotation = Quaternion.Euler(0, 0, 0);
             _moveDistance = 1;
         }
         else
         {
-            _pieceTurn = Turn.後手;
+            pieceTurn = Turn.後手;
             transform.rotation = Quaternion.Euler(0, 0, 180);
             _moveDistance = -1;
         }
@@ -69,7 +69,7 @@ public class Piece : MonoBehaviour
     public void SetPosition(Vector2Int pos)
     {
         _currentPos = pos;
-        transform.position = new Vector2(pos.x, pos.y);
+        transform.position = new Vector2(_currentPos.x, _currentPos.y);
     }
     
     /// <summary>
@@ -89,7 +89,7 @@ public class Piece : MonoBehaviour
     public void SelectPiece()
     {
         // プレイヤーのターン確認
-        if (ShogiManager.instance.activePlayer != _pieceTurn) return;
+        if (ShogiManager.instance.activePlayer != pieceTurn) return;
 
         // 選択中の駒の確認
         if (ShogiManager.instance.curSelPiece == null) // 現在選択されている駒がない場合
@@ -221,7 +221,7 @@ public class Piece : MonoBehaviour
             movablePositions.Add(pos);
             return true;
         }
-        else if (checkPieceObj != null && checkPieceObj._pieceTurn != _pieceTurn)
+        else if (checkPieceObj != null && checkPieceObj.pieceTurn != pieceTurn)
         {
             movablePositions.Add(pos);
         }
@@ -252,21 +252,25 @@ public class Piece : MonoBehaviour
             {
                 case PieceType.歩兵:
                 case PieceType.香車:
-                    if (_pieceTurn == Turn.先手 && _currentPos.y >= 9 ||
-                        _pieceTurn == Turn.後手 && _currentPos.y <= 1) 
+                    if (pieceTurn == Turn.先手 && _currentPos.y >= 9 ||
+                        pieceTurn == Turn.後手 && _currentPos.y <= 1)
+                    {
                         ShogiManager.instance.PromotePiece(_currentPos, pieceData);
-                    return;
+                    }
+                    break;
                 case PieceType.桂馬:
-                    if (_pieceTurn == Turn.先手 && _currentPos.y >= 8 ||
-                        _pieceTurn == Turn.後手 && _currentPos.y <= 2) 
+                    if (pieceTurn == Turn.先手 && _currentPos.y >= 8 ||
+                        pieceTurn == Turn.後手 && _currentPos.y <= 2)
+                    {
                         ShogiManager.instance.PromotePiece(_currentPos, pieceData);
-                    return;
+                    }
+                    break;
             }
             
             // 現在、敵陣にいるかどうか
             bool nowInEnemyCamp =
-                _pieceTurn == Turn.先手 && _currentPos.y >= 7 ||
-                _pieceTurn == Turn.後手 && _currentPos.y <= 3;
+                pieceTurn == Turn.先手 && _currentPos.y >= 7 ||
+                pieceTurn == Turn.後手 && _currentPos.y <= 3;
 
             // 前のターン、敵陣にいたかどうか
             bool leftEnemyCampThisTurn = _wasInEnemyCamp && !nowInEnemyCamp;

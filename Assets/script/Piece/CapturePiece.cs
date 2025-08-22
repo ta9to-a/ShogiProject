@@ -94,6 +94,12 @@ public class CapturePiece : MonoBehaviour
                     switch (capturePieceType)
                     {
                         case PieceType.歩兵:
+                            bool[] fuPosition = ShogiManager.instance.activePlayer == Turn.先手
+                                ? ShogiManager.instance.senteFuPosition
+                                : ShogiManager.instance.goteFuPosition;
+                            if (position.y >= (_capturePieceTurn == Turn.先手 ? 9 : 1) || fuPosition[position.x - 1])
+                                continue;
+                            break;
                         case PieceType.香車:
                             if (position.y >= (_capturePieceTurn == Turn.先手 ? 9 : 1))
                                 continue;
@@ -129,12 +135,22 @@ public class CapturePiece : MonoBehaviour
     {
         int pieceIndex = (int)capturePieceType;
         // 先手と後手の持ち駒の数を取得
-        int currentCount = _capturePieceTurn == Turn.先手 ? 
-            ShogiManager.instance.senteCapturedPieceType[pieceIndex] : 
-            ShogiManager.instance.goteCapturedPieceType[pieceIndex];
-        
+        int currentCount = _capturePieceTurn == Turn.先手
+            ? ShogiManager.instance.senteCapturedPieceType[pieceIndex]
+            : ShogiManager.instance.goteCapturedPieceType[pieceIndex];
+
         // スプライトの色を更新
         SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
-        spriteRenderer.color = currentCount > 0 ? Color.white : Color.gray;
+        if (currentCount <= 1)
+        {
+            spriteRenderer.color = currentCount > 0 ? Color.white : Color.gray;
+        }
+        else
+        {
+            Debug.Log(capturePieceType + " " + currentCount + "個の持ち駒があります: ");
+            CapturePieceUIManager.instance.CloneGroups.Add(capturePieceType, new List<GameObject>());
+            CapturePieceUIManager.instance.ApplyVisualUI(capturePieceType);
+            spriteRenderer.color = Color.white;
+        }
     }
 }
