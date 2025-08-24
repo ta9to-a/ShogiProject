@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -33,6 +34,7 @@ public class BoardInitializer : MonoBehaviour
         DefaultPosition();
         CreateCapturePieces(Turn.先手);
         CreateCapturePieces(Turn.後手);
+        CapturePieceUIManager.instance.Initialize();
     }
 
     private void DefaultPosition()
@@ -166,7 +168,8 @@ public class BoardInitializer : MonoBehaviour
         
         obj.layer = LayerMask.NameToLayer("CapturePiece");
         obj.tag = (turn == Turn.先手) ? "Sente" : "Gote";
-
+        
+        CapturePieceUIManager.instance.capturePieceParent.Add(obj);
         obj.GetComponent<CapturePiece>().ApplyStateCapturePiece(pieceData.pieceType, capPieceRenderer.sprite);
     }
 }

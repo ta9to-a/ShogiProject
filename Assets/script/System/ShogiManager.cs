@@ -190,13 +190,10 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public void SetCapturedPiece(PieceType pieceType, Vector2Int pos)
     {
-        boardInit.CreatePiece(pieceType, pos, activePlayer, false);
-        
         int[] capturedPieceType = (activePlayer == Turn.先手) ? 
             senteCapturedPieceType : 
             goteCapturedPieceType;
         
-        Debug.Log("" + pieceType + "を指しました。");
         // 持ち駒の数を減らす
         if (capturedPieceType[(int)pieceType] <= 0)
         {
@@ -204,7 +201,9 @@ public class ShogiManager : MonoBehaviour
             return;
         }
         // 持ち駒の数を減らす
+        boardInit.CreatePiece(pieceType, pos, activePlayer, false);
         capturedPieceType[(int)pieceType]--;
+        Debug.Log("" + pieceType + "を指しました。");
         // 持ち駒のUIを更新
         CapturePieceUIManager.instance.ApplyVisualUI(pieceType);
     }

@@ -25,18 +25,17 @@ public class CapturePieceUIManager : MonoBehaviour
     /// </summary>
     public void Initialize()
     {
+        
         CloneGroups.Clear();
-        foreach (GameObject parent in capturePieceParent.ToList())
+        foreach (GameObject parent in capturePieceParent)
         {
             CapturePiece cp = parent.GetComponent<CapturePiece>();
             if (cp == null) continue;
-
             PieceType type = cp.capturePieceType;
 
             if (!CloneGroups.TryGetValue(type, out List<GameObject> list))
             {
                 list = new List<GameObject>();
-                capturePieceParent.Add(parent);
                 CloneGroups[type] = list;
             }
             list.Add(parent); // 同じ駒種を同じグループに追加

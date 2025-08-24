@@ -6,8 +6,8 @@ using Cysharp.Threading.Tasks;
 
 public class CapturePiece : MonoBehaviour
 {
-    public PieceType capturePieceType; // 駒の種類
-    private int _heldPieceCount; // 持ち駒の数
+    public PieceType capturePieceType;  // 駒の種類
+    private int _heldPieceCount;        // 持ち駒の数
     private Turn _capturePieceTurn;
     
     private Sprite _captureSprite; // 成る前のスプライト
@@ -148,9 +148,41 @@ public class CapturePiece : MonoBehaviour
         else
         {
             Debug.Log(capturePieceType + " " + currentCount + "個の持ち駒があります: ");
-            CapturePieceUIManager.instance.CloneGroups.Add(capturePieceType, new List<GameObject>());
-            CapturePieceUIManager.instance.ApplyVisualUI(capturePieceType);
-            spriteRenderer.color = Color.white;
+            if (CapturePieceUIManager.instance.CloneGroups.TryGetValue(capturePieceType, out List<GameObject> clones))
+            {
+                
+                
+                /*Debug.Log(clones.Count + " " + currentCount);
+                if (clones.Count < currentCount)
+                {
+                    Debug.Log("クローンの生成処理" + clones.Count + " -> " + currentCount);
+                    for (int i = clones.Count; i < currentCount; i++)
+                    {
+                        GameObject newClone = Instantiate(gameObject, transform.parent , false);
+                        newClone.name = this.gameObject.name + "_Clone_" + (i + 1);
+                        /*CapturePiece cloneCapturePiece = newClone.GetComponent<CapturePiece>();
+                        if (cloneCapturePiece != null)
+                        {
+                            cloneCapturePiece.ApplyStateCapturePiece(capturePieceType, _captureSprite);
+                        }#1#
+                        clones.Add(newClone);
+                    }
+                }
+                else if (clones.Count > currentCount)
+                {
+                    Debug.Log("クローンの削除処理" + clones.Count + " -> " + currentCount);
+                    for (int i = clones.Count - 1; i >= currentCount; i--)
+                    {
+                        GameObject cloneToRemove = clones[i];
+                        clones.RemoveAt(i);
+                        Destroy(cloneToRemove);
+                    }
+                }
+                else
+                {
+                    Debug.Log("クローンの数は変更なし: " + clones.Count);
+                }*/
+            }
         }
     }
 }
