@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -7,12 +8,13 @@ using Cysharp.Threading.Tasks;
 public class CapturePiece : MonoBehaviour
 {
     public PieceType capturePieceType;  // 駒の種類
-    private int _heldPieceCount;        // 持ち駒の数
-    private Turn _capturePieceTurn;
+    public Turn capturePieceTurn;       // 取得している持ち駒の手番
     
-    private Sprite _captureSprite; // 成る前のスプライト
+    public Sprite umPromSprite; // 成る前のスプライト
     
     private List<Vector2Int> _movable = new ();
+    
+    [SerializeField] public GameObject piecePrefab;
     
     /// <summary>
     /// 持ち駒の情報を保存・更新する
@@ -23,19 +25,23 @@ public class CapturePiece : MonoBehaviour
     {
         // 駒の種類に応じてスプライトを設定
         capturePieceType = pieceType;
-        _capturePieceTurn = transform.CompareTag("Sente") ? Turn.先手 : Turn.後手;
-        
-        _captureSprite = captureSprite;
+        umPromSprite = captureSprite;
         
         // スプライトを設定
-        GetComponent<SpriteRenderer>().sprite = _captureSprite;
-        
-        // 先手と後手のタグを設定
-        transform.rotation = transform.CompareTag("Sente") ?
-            Quaternion.Euler(0, 0, 0) :     // 先手
-            Quaternion.Euler(0, 0, 180);    // 後手
+        SpriteRenderer spriteRenderer = gameObject.GetComponent<SpriteRenderer>();
+        spriteRenderer.sprite = umPromSprite;
+        spriteRenderer.sortingOrder = 20;
 
-        UpdateVisualState();
+        if (transform.CompareTag("Sente"))
+        {
+            capturePieceTurn = Turn.先手;
+            transform.rotation = Quaternion.Euler(0, 0, 0);
+        }
+        else
+        {
+            capturePieceTurn = Turn.後手;
+            transform.rotation = Quaternion.Euler(0, 0, 180);
+        }
     }
     
     /// <summary>
@@ -43,10 +49,23 @@ public class CapturePiece : MonoBehaviour
     /// </summary>
     public void SelectCapturePiece()
     {
-        if (ShogiManager.instance.activePlayer != _capturePieceTurn) return;
+        if (ShogiManager.instance.activePlayer != capturePieceTurn) return;
+        
+        // 先手と後手の持ち駒の数を取得
+        int pieceIndex = (int)capturePieceType;
+        
+        int currentCount = capturePieceTurn == Turn.先手
+            ? ShogiManager.instance.senteCapturedPieceType[pieceIndex]
+            : ShogiManager.instance.goteCapturedPieceType[pieceIndex];
+        
+        if (currentCount <= 0)
+        {
+            Debug.Log("持ち駒がありません: " + capturePieceType);
+            return;
+        }
         
         // 駒の選択処理
-        if (ShogiManager.instance.activePlayer == _capturePieceTurn)
+        if (ShogiManager.instance.activePlayer == capturePieceTurn)
         {
             if (ShogiManager.instance.curSelPiece == null)
             {
@@ -62,7 +81,7 @@ public class CapturePiece : MonoBehaviour
         }
     }
     
-    private async void SettingCapturePiece()
+    public async void SettingCapturePiece()
     {
         // 持ち駒の設置可能なマス目のチェック
         List<Vector2Int> checkMovablePositions = CheckMovablePositions();
@@ -79,6 +98,8 @@ public class CapturePiece : MonoBehaviour
 
         // 駒を指す
         ShogiManager.instance.SetCapturedPiece(capturePieceType, clickedPoint);
+        
+        // ターンの終了
         ShogiManager.instance.EndTurnPhase();
     }
 
@@ -97,15 +118,15 @@ public class CapturePiece : MonoBehaviour
                             bool[] fuPosition = ShogiManager.instance.activePlayer == Turn.先手
                                 ? ShogiManager.instance.senteFuPosition
                                 : ShogiManager.instance.goteFuPosition;
-                            if (position.y >= (_capturePieceTurn == Turn.先手 ? 9 : 1) || fuPosition[position.x - 1])
+                            if (position.y >= (capturePieceTurn == Turn.先手 ? 9 : 1) || fuPosition[position.x - 1])
                                 continue;
                             break;
                         case PieceType.香車:
-                            if (position.y >= (_capturePieceTurn == Turn.先手 ? 9 : 1))
+                            if (position.y >= (capturePieceTurn == Turn.先手 ? 9 : 1))
                                 continue;
                             break;
                         case PieceType.桂馬:
-                            if (position.y >= (_capturePieceTurn == Turn.先手 ? 8 : 2))
+                            if (position.y >= (capturePieceTurn == Turn.先手 ? 8 : 2))
                                 continue;
                             break;
                     }
@@ -135,53 +156,30 @@ public class CapturePiece : MonoBehaviour
     {
         int pieceIndex = (int)capturePieceType;
         // 先手と後手の持ち駒の数を取得
-        int currentCount = _capturePieceTurn == Turn.先手
-            ? ShogiManager.instance.senteCapturedPieceType[pieceIndex]
-            : ShogiManager.instance.goteCapturedPieceType[pieceIndex];
+        int currentCount = (capturePieceTurn == Turn.先手) ?
+            ShogiManager.instance.senteCapturedPieceType[pieceIndex]:
+            ShogiManager.instance.goteCapturedPieceType[pieceIndex];
+        
+        (PieceType, Turn) key = (capturePieceType, capturePieceTurn);
+        int cloneCount = CapturePieceUIManager.instance.CloneGroups[key].Count;
 
-        // スプライトの色を更新
-        SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
-        if (currentCount <= 1)
+        if (cloneCount <= 1 && currentCount <= 1)
         {
+            // 持ち駒の数が変わった場合、UIを更新
+            SpriteRenderer spriteRenderer = GetComponent<SpriteRenderer>();
             spriteRenderer.color = currentCount > 0 ? Color.white : Color.gray;
         }
         else
         {
-            Debug.Log(capturePieceType + " " + currentCount + "個の持ち駒があります: ");
-            if (CapturePieceUIManager.instance.CloneGroups.TryGetValue(capturePieceType, out List<GameObject> clones))
+            if (cloneCount < currentCount)
             {
-                
-                
-                /*Debug.Log(clones.Count + " " + currentCount);
-                if (clones.Count < currentCount)
-                {
-                    Debug.Log("クローンの生成処理" + clones.Count + " -> " + currentCount);
-                    for (int i = clones.Count; i < currentCount; i++)
-                    {
-                        GameObject newClone = Instantiate(gameObject, transform.parent , false);
-                        newClone.name = this.gameObject.name + "_Clone_" + (i + 1);
-                        /*CapturePiece cloneCapturePiece = newClone.GetComponent<CapturePiece>();
-                        if (cloneCapturePiece != null)
-                        {
-                            cloneCapturePiece.ApplyStateCapturePiece(capturePieceType, _captureSprite);
-                        }#1#
-                        clones.Add(newClone);
-                    }
-                }
-                else if (clones.Count > currentCount)
-                {
-                    Debug.Log("クローンの削除処理" + clones.Count + " -> " + currentCount);
-                    for (int i = clones.Count - 1; i >= currentCount; i--)
-                    {
-                        GameObject cloneToRemove = clones[i];
-                        clones.RemoveAt(i);
-                        Destroy(cloneToRemove);
-                    }
-                }
-                else
-                {
-                    Debug.Log("クローンの数は変更なし: " + clones.Count);
-                }*/
+                // 持ち駒が増えた場合
+                CapturePieceUIManager.instance.AddCapturedPiece(this.GameObject());
+            }
+            else if (cloneCount > currentCount)
+            {
+                // 持ち駒が減った場合
+                CapturePieceUIManager.instance.RemoveCapturedPiece(this.GameObject());
             }
         }
     }

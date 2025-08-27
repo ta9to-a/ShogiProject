@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class ShogiManager : MonoBehaviour
@@ -175,7 +176,8 @@ public class ShogiManager : MonoBehaviour
             PieceType basePieceType = enemyPiece.basePieceType;
             // 駒の種類に応じてカウントを増やす
             pieceCount[(int)basePieceType]++;
-            CapturePieceUIManager.instance.ApplyVisualUI(basePieceType);
+            
+            CapturePieceUIManager.instance.ApplyVisualUI(basePieceType, activePlayer);
             
             // 駒オブジェクトを削除
             Destroy(enemyPiece.gameObject);
@@ -194,18 +196,13 @@ public class ShogiManager : MonoBehaviour
             senteCapturedPieceType : 
             goteCapturedPieceType;
         
-        // 持ち駒の数を減らす
-        if (capturedPieceType[(int)pieceType] <= 0)
-        {
-            Debug.LogError("持ち駒が足りません: " + pieceType);
-            return;
-        }
-        // 持ち駒の数を減らす
+        // 持ち駒の数を指す
         boardInit.CreatePiece(pieceType, pos, activePlayer, false);
         capturedPieceType[(int)pieceType]--;
+        
         Debug.Log("" + pieceType + "を指しました。");
         // 持ち駒のUIを更新
-        CapturePieceUIManager.instance.ApplyVisualUI(pieceType);
+        CapturePieceUIManager.instance.ApplyVisualUI(pieceType, activePlayer);
     }
 
     /// <summary>

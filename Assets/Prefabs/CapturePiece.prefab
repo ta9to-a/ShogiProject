@@ -47,6 +47,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e6b85894ed4664156aa904fda7ec1beb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  capturePieceType: 0
+  piecePrefab: {fileID: 8567157455136156654, guid: 60809c4ce31ea44e3a4b8ab69de3aef0, type: 3}
 --- !u!212 &500642461979623263
 SpriteRenderer:
   m_ObjectHideFlags: 0

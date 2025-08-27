@@ -279,7 +279,7 @@ public class Piece : MonoBehaviour
             if (nowInEnemyCamp || leftEnemyCampThisTurn)
             {
                 // 成るかどうかのUIを表示
-                bool isPromote = await PromotionUIManager.Instance.ShowAsync(_currentPos, _unpromSprite, _promSprite);
+                bool isPromote = await PromotionUIManager.instance.ShowAsync(_currentPos, _unpromSprite, _promSprite);
                 if (isPromote)
                 {
                     // 成る処理

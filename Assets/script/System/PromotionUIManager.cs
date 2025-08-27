@@ -4,7 +4,7 @@ using Cysharp.Threading.Tasks;
 
 public class PromotionUIManager : MonoBehaviour
 {
-    public static PromotionUIManager Instance { get; private set; }
+    public static PromotionUIManager instance { get; private set; }
     
     [SerializeField] private GameObject panel;
     [SerializeField] private Button promoteButton;
@@ -14,13 +14,13 @@ public class PromotionUIManager : MonoBehaviour
     
     private void Awake()
     {
-        if (Instance != null && Instance != this)
+        if (instance != null && instance != this)
         {
             Destroy(gameObject);
             return;
         }
         
-        Instance = this;
+        instance = this;
         
         panel.SetActive(false);
     }

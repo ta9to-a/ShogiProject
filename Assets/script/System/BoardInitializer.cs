@@ -27,7 +27,6 @@ public class BoardInitializer : MonoBehaviour
     [SerializeField] private float capturePieceWidth = 1.5f; // 持ち駒の横幅
     [Tooltip("持ち駒の縦幅")]
     [SerializeField] private float capturePieceHeight = 1.0f; // 持ち駒の縦幅
-    private Dictionary<string, List<GameObject>> _cloneGroups = new(); // 駒のクローンをグループ
 
     void Start()
     {
