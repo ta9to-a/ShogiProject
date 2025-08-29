@@ -9,7 +9,7 @@ public class Piece : MonoBehaviour
 {
     public PieceType basePieceType;         // 駒の基本種類
     private PieceType _currentPieceType;    // 駒の種類
-    public Turn pieceTurn;                // 駒のターン（先手 or 後手）
+    public Turn pieceTurn;                  // 駒のターン（先手 or 後手）
 
     private Vector2Int _currentPos;     // 駒の現在位置
     private int _moveDistance;          // 駒の移動方向（先手は1、後手は-1）
@@ -115,6 +115,9 @@ public class Piece : MonoBehaviour
         Vector2Int[] moves = GetMoveRange();
         // 移動可能なマス目の取得
         List<Vector2Int> checkMovablePositions = CheckMovablePositions(moves);
+        // 移動可能なマス目をハイライト表示
+        ShogiManager.instance.moveHighlight.SetCanMovePosHighlight(checkMovablePositions);
+        
         // クリックされるまで待つ
         Vector2Int clickedPoint = await WaitForMouseClick();
 
@@ -135,7 +138,7 @@ public class Piece : MonoBehaviour
         CheckPromotion();
 
         // 駒の状態を更新
-        ShogiManager.instance.EndTurnPhase();
+        ShogiManager.instance.EndTurnPhase(clickedPoint);
     }
 
     /// <summary>
@@ -256,6 +259,7 @@ public class Piece : MonoBehaviour
                         pieceTurn == Turn.後手 && _currentPos.y <= 1)
                     {
                         ShogiManager.instance.PromotePiece(_currentPos, pieceData);
+                        return;
                     }
                     break;
                 case PieceType.桂馬:
@@ -263,6 +267,7 @@ public class Piece : MonoBehaviour
                         pieceTurn == Turn.後手 && _currentPos.y <= 2)
                     {
                         ShogiManager.instance.PromotePiece(_currentPos, pieceData);
+                        return;
                     }
                     break;
             }

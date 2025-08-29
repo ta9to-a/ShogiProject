@@ -25,7 +25,6 @@ public class ShogiManager : MonoBehaviour
     public bool[] goteFuPosition = new bool[9];  // 後手の歩の列状態
     
     private int _recMoveCount = 0; // 手数のカウント
-    
     /*// ハイライトの管理
     [SerializeField] GameObject highlightPrefab; // 駒のハイライト用プレハブ
     List<GameObject> _activeHighlights = new();
@@ -44,6 +43,7 @@ public class ShogiManager : MonoBehaviour
     
     [Header("持ち駒の管理")]
     [SerializeField] public BoardInitializer boardInit; // 持ち駒
+    [SerializeField] public MoveHighlight moveHighlight; // 駒の移動可能範囲ハイライト
     
     [Header("駒のデータベース")]
     [SerializeField] public PieceDatabase pieceDatabase;
@@ -72,32 +72,41 @@ public class ShogiManager : MonoBehaviour
 
     private void Start()
     {
-        EndTurnPhase();
+        EndTurnPhase(null);
     }
 
     public void CancelSelection()
     {
         curSelPiece = null;
-        //ClearHighlights();
+        moveHighlight.RemoveHighlight();
     }
     
     /// <summary>
     /// 局面の移動フェーズを終了し、次の手番に移行
     /// </summary>
-    public void EndTurnPhase()
+    public void EndTurnPhase(Vector2Int? toPos)
     {
         // 二歩のチェック
         CheckTwoFu();
         
         // 局面の保存
         AddKifuEntry();
+        
+        // 詰み状態ではないかのチェック
+        bool isCheckmate = IsCheckmate();
+        
         _recMoveCount++;
         
         // 手番を切り替える
-        curSelPiece = null;
         if (_recMoveCount >= 2)
         {
             activePlayer = (activePlayer == Turn.先手) ? Turn.後手 : Turn.先手;
+            
+            CancelSelection();
+            if (toPos.HasValue)
+            {
+                moveHighlight.SetLastMoveHighlight(toPos.Value);
+            }
         }
     }
 
@@ -107,6 +116,28 @@ public class ShogiManager : MonoBehaviour
     private void AddKifuEntry()
     {
         
+    }
+    
+    /// <summary>
+    /// 詰みの状態をチェック
+    /// </summary>
+    private bool IsCheckmate()
+    {
+        for (int x = 0; x < 9; x++)
+        {
+            for (int y = 0; y < 9; y++)
+            {
+                PieceType pieceType = _boardState[x, y];
+                if (pieceType == PieceType.玉将)
+                {
+                    Piece kingObj = GetPieceAt(new Vector2Int(x + 1, y + 1));
+                    
+                    // TODO: 玉将の移動可能範囲を取得し、相手の駒の移動範囲と照合して詰みかどうかを判定
+                }
+            }
+        }
+        
+        return false;
     }
 
     /// <summary>
@@ -439,128 +470,5 @@ public class ShogiManager : MonoBehaviour
         }
     
         return notation;
-    }
-    
-    //----------------------------------
-    //---------ハイライトの管理------------
-    //----------------------------------
-    
-    // ハイライトの生成
-    void CreateHighlightSquare(Vector2 position)
-    {
-        GameObject highlight = Instantiate(highlightPrefab, position, Quaternion.identity);
-        highlight.tag = "Highlight";
-        highlight.layer = LayerMask.NameToLayer("Default");
-        highlight.GetComponent<SpriteRenderer>().sortingOrder = 1;
-        
-        _sr = highlight.GetComponent<SpriteRenderer>();
-        _sr.color = new Color(1f, 1f, 1f, 0.6f);
-        
-        _activeHighlights.Add(highlight);
-        highlight.name = $"{position.x}.{position.y}";
-        
-        highlight.transform.SetParent(this.transform, false);
-    }
-
-    public void CreateMoveHighlightSquares(List<Vector2> canMovePositions, Vector2 position)
-    {
-        for (int x = 1; x <= 9; x++)
-        {
-            for (int y = 1; y <= 9; y++)
-            {
-                Vector2 highlightPosition = new Vector2(x, y);
-                GameObject nowCheckedPiece = 
-                    Physics2D.OverlapPoint(highlightPosition, LayerMask.GetMask("Piece"))?.gameObject;
-                
-                if (!canMovePositions.Contains(highlightPosition) && highlightPosition != position)
-                {
-                    CreateHighlightSquare(highlightPosition);
-                }
-                else if (canMovePositions.Contains(highlightPosition) && nowCheckedPiece != null)
-                {
-                    string currentTurnTag = ActivePlayer ? "Sente" : "Gote";
-                    
-                    if (nowCheckedPiece.CompareTag(currentTurnTag))
-                    {
-                        CreateHighlightSquare(highlightPosition);
-                    }
-                }
-            }
-        }
-    }
-
-    public void CreateDropHighlightSquares(Piece.PieceId pieceType)
-    {
-        for (int x = 1; x <= 9; x++)
-        {
-            if (pieceType == Piece.PieceId.Hu)
-            {
-                bool fuPositionCheck = ActivePlayer ? SenteFuPosition[x - 1] : GoteFuPosition[x - 1];
-                if (fuPositionCheck)
-                {
-                    // その列（x座標）の全マスを設置不可としてハイライト
-                    for (int fy = 1; fy <= 9; fy++)
-                    {
-                        Vector2 invalidPosition = new Vector2(x, fy);
-                        CreateHighlightSquare(invalidPosition);
-                    }
-                    continue;
-                }
-            }
-            for (int y = 1; y <= 9; y++)
-            {
-                Vector2 highlightPosition = new Vector2(x, y);
-                GameObject nowCheckedPiece = 
-                    Physics2D.OverlapPoint(highlightPosition, LayerMask.GetMask("Piece"))?.gameObject;
-
-                switch (pieceType)
-                {
-                    case Piece.PieceId.Hu:
-                    case Piece.PieceId.Kyosha:
-                    case Piece.PieceId.Keima:
-                        if (!IsValidDropPosition(pieceType, highlightPosition))
-                        {
-                            CreateHighlightSquare(highlightPosition);
-                            continue;
-                        }
-                        break;
-                }
-
-                // 盤上に駒がない場合はハイライトを生成
-                if (nowCheckedPiece != null)
-                {
-                    CreateHighlightSquare(highlightPosition);
-                }
-            }
-        }
-    }
-
-    // 強制成りの場合
-    bool IsValidDropPosition(Piece.PieceId pieceType, Vector2 position)
-    {
-        int y = (int)position.y;
-    
-        switch (pieceType)
-        {
-            case Piece.PieceId.Hu:    // 歩兵
-            case Piece.PieceId.Kyosha: // 香車
-                return ActivePlayer ? y > 1 : y < 9;
-            
-            case Piece.PieceId.Keima:  // 桂馬
-                return ActivePlayer ? y > 2 : y < 8;
-            
-            default:
-                return true;
-        }
-    }
-
-    // 駒の選択クリア
-    public void ClearHighlights()
-    {
-        foreach (GameObject highlight in _activeHighlights)
-        {
-            if (highlight != null) Destroy(highlight);
-        }
-        _activeHighlights.Clear();
     }*/
 }

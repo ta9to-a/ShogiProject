@@ -86,6 +86,8 @@ public class CapturePiece : MonoBehaviour
         // 持ち駒の設置可能なマス目のチェック
         List<Vector2Int> checkMovablePositions = CheckMovablePositions();
         
+        ShogiManager.instance.moveHighlight.SetCanMovePosHighlight(checkMovablePositions);
+        
         Vector2Int clickedPoint = await WaitForMouseClick();
         
         // クリックされた位置が移動可能なマス目かチェック
@@ -100,7 +102,7 @@ public class CapturePiece : MonoBehaviour
         ShogiManager.instance.SetCapturedPiece(capturePieceType, clickedPoint);
         
         // ターンの終了
-        ShogiManager.instance.EndTurnPhase();
+        ShogiManager.instance.EndTurnPhase(clickedPoint);
     }
 
     private List<Vector2Int> CheckMovablePositions()

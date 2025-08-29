@@ -116,7 +116,7 @@ public class BoardInitializer : MonoBehaviour
         }
         pieceObj.transform.SetParent(parentObject.transform, false);
         pieceScript.ApplyStatePiece(pieceType, position, isPromoted, unpromotedSprite, promotedSprite);
-        pieceObj.GetComponent<SpriteRenderer>().sortingOrder = 10;
+        pieceObj.GetComponent<SpriteRenderer>().sortingOrder = 1;
         
         ShogiManager.instance.PlacePiece(position, pieceType, pieceObj.GetComponent<Piece>());
     }

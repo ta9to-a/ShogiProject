@@ -96,7 +96,7 @@ public class CapturePieceUIManager : MonoBehaviour
             SpriteRenderer spriteRenderer = capturedPieceClone.GetComponent<SpriteRenderer>();
 
             int groupCount = CloneGroups[key].Count;
-            spriteRenderer.sortingOrder = 20 - groupCount; // 持ち駒の描画順序を設定
+            spriteRenderer.sortingOrder = 18 - groupCount; // 持ち駒の描画順序を設定
             
             float startGray = 1f; // 最初の色の明るさ
             float step = 0.07f; // 色の変化のステップ
