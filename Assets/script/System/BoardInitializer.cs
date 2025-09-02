@@ -34,6 +34,7 @@ public class BoardInitializer : MonoBehaviour
         CreateCapturePieces(Turn.先手);
         CreateCapturePieces(Turn.後手);
         CapturePieceUIManager.instance.Initialize();
+        ShogiManager.instance.SetGame();
     }
 
     private void DefaultPosition()

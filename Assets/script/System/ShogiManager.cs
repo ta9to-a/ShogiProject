@@ -25,11 +25,9 @@ public class ShogiManager : MonoBehaviour
     public bool[] goteFuPosition = new bool[9];  // 後手の歩の列状態
     
     private int _recMoveCount = 0; // 手数のカウント
-    /*// ハイライトの管理
-    [SerializeField] GameObject highlightPrefab; // 駒のハイライト用プレハブ
-    List<GameObject> _activeHighlights = new();
-    SpriteRenderer _sr;
     
+    private Dictionary<Piece, List<Vector2Int>> _movePoints;
+    /*
     public static bool CanSelect; // 選択状況を管理するフラグ
 
     private bool? _playerChoice;
@@ -70,7 +68,7 @@ public class ShogiManager : MonoBehaviour
         }
     }
 
-    private void Start()
+    public void SetGame()
     {
         EndTurnPhase(null);
     }
@@ -94,6 +92,11 @@ public class ShogiManager : MonoBehaviour
         
         // 詰み状態ではないかのチェック
         bool isCheckmate = IsCheckmate();
+        if (isCheckmate)
+        {
+            Debug.Log("決着がつきました。");
+            return;
+        }
         
         _recMoveCount++;
         
@@ -121,23 +124,54 @@ public class ShogiManager : MonoBehaviour
     /// <summary>
     /// 詰みの状態をチェック
     /// </summary>
+    // TODO: 玉将の移動可能範囲を取得し、相手の駒の移動範囲と照合して詰みかどうかを判定
     private bool IsCheckmate()
     {
+        Dictionary<Piece, List<Vector2Int>> kingMovePoints = new ();
+        Dictionary<Piece, List<Vector2Int>> anotherMovePoints = new ();
+        
+        bool isOute = false;
+        
         for (int x = 0; x < 9; x++)
         {
             for (int y = 0; y < 9; y++)
             {
+                // 駒の情報を取得
                 PieceType pieceType = _boardState[x, y];
+                if (pieceType == PieceType.None) continue;
+                
+                Vector2Int pos = new Vector2Int(x + 1, y + 1);
+                Piece pieceObj = GetPieceAt(pos);
+                
                 if (pieceType == PieceType.玉将)
                 {
-                    Piece kingObj = GetPieceAt(new Vector2Int(x + 1, y + 1));
-                    
-                    // TODO: 玉将の移動可能範囲を取得し、相手の駒の移動範囲と照合して詰みかどうかを判定
+                    List<Vector2Int> movePoints = pieceObj.GetMovePoints();
+                    kingMovePoints[pieceObj] = movePoints;
+                }
+                else
+                {
+                    List<Vector2Int> movePoints = pieceObj.GetMovePoints();
+                    anotherMovePoints[pieceObj] = movePoints;
                 }
             }
         }
+
+        // 王手のチェック
+        foreach (var piece in anotherMovePoints.Keys)
+        {
+            Debug.Log(piece.name + "の移動可能範囲: " + string.Join(", ", anotherMovePoints[piece]));
+            if (piece.isOute)
+            {
+                isOute = true;
+                break;
+            }
+        }
         
-        return false;
+        if (!isOute) return false; // 王手ではないなら詰みではない
+        
+        Debug.Log("王手です。");
+        
+        return true;
     }
 
     /// <summary>
@@ -212,7 +246,7 @@ public class ShogiManager : MonoBehaviour
             
             // 駒オブジェクトを削除
             Destroy(enemyPiece.gameObject);
-            Debug.Log(pieceType + "を捕獲しました。");
+            //Debug.Log(pieceType + "を捕獲しました。");
         }
         // 盤面から駒を削除
         RemovePiece(pos);
