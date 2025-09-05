@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 7918346829131880545}
   - component: {fileID: -1105059341531307485}
   m_Layer: 6
-  m_Name: CapturePiece
+  m_Name: CapturePieceParent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48,7 +48,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   capturePieceType: 0
-  piecePrefab: {fileID: 8567157455136156654, guid: 60809c4ce31ea44e3a4b8ab69de3aef0, type: 3}
+  capturePieceTurn: 0
+  capturePieceChildPrefab: {fileID: 8567157455136156654, guid: 60809c4ce31ea44e3a4b8ab69de3aef0, type: 3}
+  umPromSprite: {fileID: 0}
 --- !u!212 &500642461979623263
 SpriteRenderer:
   m_ObjectHideFlags: 0

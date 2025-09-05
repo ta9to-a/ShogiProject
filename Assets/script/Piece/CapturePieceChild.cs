@@ -5,7 +5,7 @@ using UnityEngine;
 public class CapturePieceChild : MonoBehaviour
 {
     public PieceType capturePieceType;  // 駒の種類
-    public Turn capturePieceTurn;
+    public Turn capturePieceTurn;       // 駒のターン（先手 or 後手）
     
     public void ApplyStateCapturePiece(PieceType pieceType, Sprite captureSprite)
     {
@@ -32,21 +32,21 @@ public class CapturePieceChild : MonoBehaviour
     /// </summary>
     public void SelectCapturePiece()
     {
-        if (ShogiManager.Instance.activePlayer != capturePieceTurn) return;
+        if (ShogiManager.instance.activePlayer != capturePieceTurn) return;
         
         // 駒の選択処理
-        if (ShogiManager.Instance.activePlayer == capturePieceTurn)
+        if (ShogiManager.instance.activePlayer == capturePieceTurn)
         {
-            if (ShogiManager.Instance.curSelPiece == null)
+            if (ShogiManager.instance.curSelPiece == null)
             {
-                ShogiManager.Instance.curSelPiece = this.gameObject;
-                Debug.Log(ShogiManager.Instance.curSelPiece.name + "が選択されました");
+                ShogiManager.instance.curSelPiece = this.gameObject;
+                Debug.Log(ShogiManager.instance.curSelPiece.name + "が選択されました");
                 
                 var key = (capturePieceType, capturePieceTurn);
                 GameObject typeParent = CapturePieceUIManager.instance.CloneGroups[key][0];
-                ShogiManager.Instance.curSelPiece = typeParent;
+                ShogiManager.instance.curSelPiece = typeParent;
                 
-                CapturePiece cp = typeParent.GetComponent<CapturePiece>();
+                CapturePieceParent cp = typeParent.GetComponent<CapturePieceParent>();
                 if (cp != null)
                 {
                     cp.SettingCapturePiece();
@@ -54,7 +54,7 @@ public class CapturePieceChild : MonoBehaviour
             }
             else
             {
-                ShogiManager.Instance.curSelPiece = null;
+                ShogiManager.instance.curSelPiece = null;
                 Debug.Log("駒の選択が解除されました");
             }
         }

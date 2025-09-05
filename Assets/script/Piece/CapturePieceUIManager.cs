@@ -28,7 +28,7 @@ public class CapturePieceUIManager : MonoBehaviour
         CloneGroups.Clear();
         foreach (GameObject parent in capturePieceParent)
         {
-            CapturePiece cp = parent.GetComponent<CapturePiece>();
+            CapturePieceParent cp = parent.GetComponent<CapturePieceParent>();
             if (cp == null) continue;
             
             PieceType type = cp.capturePieceType;
@@ -48,18 +48,16 @@ public class CapturePieceUIManager : MonoBehaviour
     /// <summary>
     /// ビジュアルの更新
     /// </summary>
-    /// <param name="pieceType"></param>
-    /// <param name="turn"></param>
     public void ApplyVisualUI(PieceType pieceType ,Turn turn)
     {
         // 駒の種類に応じてUIを更新
         (PieceType, Turn) key = (pieceType, turn);
         if (CloneGroups.TryGetValue(key, out List<GameObject> clones) && clones.Count > 0)
         {
-            CapturePiece capturePiece = clones[0].GetComponent<CapturePiece>();
-            if (capturePiece != null)
+            CapturePieceParent capturePieceParent = clones[0].GetComponent<CapturePieceParent>();
+            if (capturePieceParent != null)
             {
-                capturePiece.UpdateVisualState();
+                capturePieceParent.UpdateVisualState();
             }
         }
         else
@@ -71,10 +69,9 @@ public class CapturePieceUIManager : MonoBehaviour
     /// <summary>
     /// 持ち駒の追加時のUI処理
     /// </summary>
-    /// <param name="capturedPiece"></param>
     public void AddCapturedPiece(GameObject capturedPiece)
     {
-        CapturePiece cp = capturedPiece.GetComponent<CapturePiece>();
+        CapturePieceParent cp = capturedPiece.GetComponent<CapturePieceParent>();
         
         PieceType pieceType = cp.capturePieceType;
         Turn turn = cp.capturePieceTurn;
@@ -82,7 +79,7 @@ public class CapturePieceUIManager : MonoBehaviour
         (PieceType, Turn) key = (pieceType, turn);
         if (CloneGroups.TryGetValue(key, out List<GameObject> clones) && clones.Count > 0)
         {
-            GameObject capturedPieceClone = Instantiate(cp.piecePrefab, capturedPiece.transform, false);
+            GameObject capturedPieceClone = Instantiate(cp.capturePieceChildPrefab, capturedPiece.transform, false);
             capturedPieceClone.name = $"{turn} : {pieceType} Clone";
             capturedPieceClone.tag = turn == Turn.先手 ? "Sente" : "Gote";
             
@@ -98,8 +95,8 @@ public class CapturePieceUIManager : MonoBehaviour
             int groupCount = CloneGroups[key].Count;
             spriteRenderer.sortingOrder = 18 - groupCount; // 持ち駒の描画順序を設定
             
-            float startGray = 1f; // 最初の色の明るさ
-            float step = 0.07f; // 色の変化のステップ
+            float startGray = 1f;   // 最初の色の明るさ
+            float step = 0.07f;     // 色の変化の段階
             float colorValue = Mathf.Clamp01(startGray - step * (clones.Count));
             spriteRenderer.color = new Color(colorValue, colorValue, colorValue, 1.0f);
             
@@ -123,7 +120,7 @@ public class CapturePieceUIManager : MonoBehaviour
     /// <param name="capturedPiece"></param>
     public void RemoveCapturedPiece(GameObject capturedPiece)
     {
-        CapturePiece cp = capturedPiece.GetComponent<CapturePiece>();
+        CapturePieceParent cp = capturedPiece.GetComponent<CapturePieceParent>();
         
         PieceType pieceType = cp.capturePieceType;
         Turn turn = cp.capturePieceTurn;

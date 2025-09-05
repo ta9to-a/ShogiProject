@@ -8,13 +8,12 @@ public class MoveHighlight : MonoBehaviour
 {
     // 移動可能なマス目のハイライト
     [SerializeField] private GameObject highlightPrefab; // ハイライトのプレハブ
-    private List<GameObject> _highlights = new List<GameObject>(); // ハイライトのリスト
+    private List<GameObject> _highlights = new (); // ハイライトのリスト
     
     // 移動があったマス目のハイライト
-    [SerializeField] public GameObject lastMoveHighlight; // 最後の移動のハイライトのプレハブ
-    private bool _isChanging;
+    [SerializeField] public GameObject lastMoveHighlightPrefab; // 最後の移動のハイライトのプレハブ
+    private bool _isChanging;   // 点滅中かどうか
     
-    // キャンセルトークン
     private System.Threading.CancellationTokenSource _cts;
 
     private void Awake()
@@ -22,8 +21,8 @@ public class MoveHighlight : MonoBehaviour
         _isChanging = false;
         _highlights.Clear();
         
-        lastMoveHighlight.SetActive(false);
-        lastMoveHighlight.GetComponent<SpriteRenderer>().sortingOrder = 0;
+        lastMoveHighlightPrefab.SetActive(false);
+        lastMoveHighlightPrefab.GetComponent<SpriteRenderer>().sortingOrder = 0;
     }
 
     private void OnEnable()
@@ -43,7 +42,6 @@ public class MoveHighlight : MonoBehaviour
     /// <summary>
     /// ハイライトを表示する
     /// </summary>
-    /// <param name="positions"></param>
     public void SetCanMovePosHighlight(List<Vector2Int> positions)
     {
         if (highlightPrefab == null || positions == null) return;
@@ -88,33 +86,32 @@ public class MoveHighlight : MonoBehaviour
     /// <summary>
     /// 最後に移動したマス目にハイライトを表示
     /// </summary>
-    /// <param name="toPos"></param>
     public void SetLastMoveHighlight(Vector2Int? toPos)
     {
-        if (lastMoveHighlight == null) return;
+        if (lastMoveHighlightPrefab == null) return;
 
         // 移動元と移動先にハイライトを表示
-        if (toPos != null) lastMoveHighlight.transform.position = new Vector3(toPos.Value.x, toPos.Value.y, 0f);
+        if (toPos != null) lastMoveHighlightPrefab.transform.position = new Vector3(toPos.Value.x, toPos.Value.y, 0f);
         _isChanging = true;
     }
 
     /// <summary>
-    /// 
+    /// 最後に移動したマス目の点滅処理
     /// </summary>
     private async UniTask ChangingMovedPointMoveAsync(System.Threading.CancellationToken ct)
     {
-        if (lastMoveHighlight == null) return;
+        if (lastMoveHighlightPrefab == null) return;
         
-        SpriteRenderer spriteRenderer = lastMoveHighlight.GetComponent<SpriteRenderer>();
+        SpriteRenderer spriteRenderer = lastMoveHighlightPrefab.GetComponent<SpriteRenderer>();
         spriteRenderer.color = new Color(1f, 1f, 1f, 0f);
         
         while (!ct.IsCancellationRequested)
         {
             if (!_isChanging)
             {
-                if (lastMoveHighlight.activeSelf)
+                if (lastMoveHighlightPrefab.activeSelf)
                 {
-                    lastMoveHighlight.SetActive(false);
+                    lastMoveHighlightPrefab.SetActive(false);
                     spriteRenderer.color = new Color(1f, 1f, 1f, 0.5f);
                 }
                 // 次フレームまで待機
@@ -123,7 +120,7 @@ public class MoveHighlight : MonoBehaviour
             }
 
             // 点滅開始
-            lastMoveHighlight.SetActive(true);
+            lastMoveHighlightPrefab.SetActive(true);
             
             for (float alpha = 0.5f; _isChanging && alpha <= 1f; alpha += 0.025f)
             {

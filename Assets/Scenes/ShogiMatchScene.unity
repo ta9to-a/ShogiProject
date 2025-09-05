@@ -168,7 +168,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   highlightPrefab: {fileID: 1601777575353363739, guid: d8a6185032b784ea393c568ade496be4, type: 3}
-  lastMoveHighlight: {fileID: 1133498829}
+  lastMoveHighlightPrefab: {fileID: 1133498829}
 --- !u!212 &128281047
 SpriteRenderer:
   m_ObjectHideFlags: 0
@@ -1445,12 +1445,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62379250ab32e4de9ab5ec3b20a0416e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  activePlayer: 0
   curSelPiece: {fileID: 0}
-  senteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
-  goteCapturedPieceType: 00000000000000000000000000000000000000000000000000000000
-  senteFuPosition: 000000000000000000
-  goteFuPosition: 000000000000000000
   boardInit: {fileID: 142689494}
   moveHighlight: {fileID: 128281046}
   pieceDatabase: {fileID: 11400000, guid: 3e1aa3e3e9ca64414906e8f9c17b3ff6, type: 2}

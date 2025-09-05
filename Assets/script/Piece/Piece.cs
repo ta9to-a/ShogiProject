@@ -7,17 +7,17 @@ using Unity.VisualScripting;
 
 public class Piece : MonoBehaviour
 {
-    public PieceType BasePieceType { get; private set; }    // 駒の基本種類
-    public Turn PieceTurn { get; private set; }             // 駒のターン（先手 or 後手）
+    public PieceType basePieceType { get; private set; }    // 駒の基本種類
+    public Turn pieceTurn { get; private set; }             // 駒のターン（先手 or 後手）
     private PieceType _currentPieceType;                    // 駒の種類
-
-    private Vector2Int _currentPos;     // 駒の現在位置
+    public Vector2Int currentPos;      // 駒の現在位置
+    
     private int _moveDistance;          // 駒の移動方向（先手は1、後手は-1）
     private bool _isPromoted;           // 駒が成り駒かどうか
     private bool _wasInEnemyCamp;       // 前のターンで敵陣にいたかどうか
     
-    private List<Vector2Int> _combined = new();                                 // 駒の移動範囲を結合するためのリスト
-    public List<Vector2Int> MovablePositions { get; private set; } = new ();    // 駒の移動可能なマス目のリスト
+    public List<Vector2Int> movablePositions { get; private set; } = new ();    // 駒の移動可能なマス目のリスト
+    private List<Vector2Int> _extraStepDirs = new();                            // 成駒時の追加の動き方
     
     private Sprite _unpromSprite;
     private Sprite _promSprite;
@@ -33,7 +33,7 @@ public class Piece : MonoBehaviour
     public void ApplyStatePiece
         (PieceType pieceType, Vector2Int position, bool isPromoted, Sprite unpromSprite, Sprite promoSprite)
     {
-        BasePieceType = pieceType;
+        basePieceType = pieceType;
         
         // 駒の種類に応じてスプライトを設定
         _unpromSprite = unpromSprite;
@@ -46,13 +46,13 @@ public class Piece : MonoBehaviour
         // 先手と後手のタグを設定
         if (transform.CompareTag("Sente"))
         {
-            PieceTurn = Turn.先手;
+            pieceTurn = Turn.先手;
             transform.rotation = Quaternion.Euler(0, 0, 0);
             _moveDistance = 1;
         }
         else
         {
-            PieceTurn = Turn.後手;
+            pieceTurn = Turn.後手;
             transform.rotation = Quaternion.Euler(0, 0, 180);
             _moveDistance = -1;
         }
@@ -69,8 +69,8 @@ public class Piece : MonoBehaviour
     /// </summary>
     public void SetPosition(Vector2Int pos)
     {
-        _currentPos = pos;
-        transform.position = new Vector2(_currentPos.x, _currentPos.y);
+        currentPos = pos;
+        transform.position = new Vector2(currentPos.x, currentPos.y);
     }
     
     /// <summary>
@@ -90,19 +90,19 @@ public class Piece : MonoBehaviour
     public void SelectPiece()
     {
         // プレイヤーのターン確認
-        if (ShogiManager.Instance.activePlayer != PieceTurn) return;
+        if (ShogiManager.instance.activePlayer != pieceTurn) return;
 
         // 選択中の駒の確認
-        if (ShogiManager.Instance.curSelPiece == null) // 現在選択されている駒がない場合
+        if (ShogiManager.instance.curSelPiece == null) // 現在選択されている駒がない場合
         {
             // 駒が選択されていない場合、現在の駒を選択状態にする
-            ShogiManager.Instance.curSelPiece = this.gameObject;
+            ShogiManager.instance.curSelPiece = this.gameObject;
             //Debug.Log(ShogiManager.instance.curSelPiece.name + "が選択されました");
             MovePiece();
         }
         else // 現在選択されている駒がある場合
         {
-            ShogiManager.Instance.curSelPiece = null;
+            ShogiManager.instance.curSelPiece = null;
             Debug.Log("駒の選択が解除されました");
         }
     }
@@ -113,31 +113,34 @@ public class Piece : MonoBehaviour
     private async void MovePiece()
     {
         // 移動可能なマス目をハイライト表示
-        ShogiManager.Instance.moveHighlight.SetCanMovePosHighlight(MovablePositions);
+        ShogiManager.instance.moveHighlight.SetCanMovePosHighlight(movablePositions);
         
         // クリックされるまで待つ
         Vector2Int clickedPoint = await WaitForMouseClick();
 
         // クリックされた位置が移動可能なマス目かチェック
-        if (!MovablePositions.Contains(clickedPoint) || clickedPoint == _currentPos)
+        if (!movablePositions.Contains(clickedPoint) || clickedPoint == currentPos)
         {
-            ShogiManager.Instance.CancelSelection();
+            ShogiManager.instance.CancelSelection();
             return;
         }
         
         // クリックされた位置に駒があるかチェック
-        if (ShogiManager.Instance.GetPieceAt(clickedPoint) != null) ShogiManager.Instance.AddCapturedPiece(clickedPoint);
+        if (ShogiManager.instance.GetPieceAt(clickedPoint) != null) ShogiManager.instance.AddCapturedPiece(clickedPoint);
 
         // 駒の移動処理
-        ShogiManager.Instance.MovePiece(_currentPos, clickedPoint);
+        ShogiManager.instance.MovePiece(currentPos, clickedPoint);
 
         // 駒の成駒処理
         await CheckPromotion();
 
         // 駒の状態を更新
-        ShogiManager.Instance.EndTurnPhase(clickedPoint);
+        ShogiManager.instance.EndTurnPhase(clickedPoint);
     }
 
+    /// <summary>
+    /// 駒の移動可能なマス目を更新
+    /// </summary>
     public void GetMovePoints()
     {
         Vector2Int[] moves = GetMoveRange();
@@ -149,19 +152,19 @@ public class Piece : MonoBehaviour
     /// </summary>
     private Vector2Int[] GetMoveRange()
     {
-        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(BasePieceType);
+        PieceData pieceData = ShogiManager.instance.pieceDatabase.GetPieceData(basePieceType);
         
         // 駒がなっていない、もしくは成駒動作が存在しない場合
         if (!_isPromoted || pieceData.promotionType == PromotionType.None) return pieceData.moveRange;
 
         // 成駒のデータを取得
-        PromotionData promotionData = ShogiManager.Instance.promotionDatabase.GetPromotionData(pieceData.promotionType);
+        PromotionData promotionData = ShogiManager.instance.promotionDatabase.GetPromotionData(pieceData.promotionType);
         if (!promotionData.moveUpdate)  // 成駒動作を追加する場合
         {
-            _combined.Clear();
+            _extraStepDirs.Clear();
             foreach (Vector2Int move in promotionData.moveRange)
             {
-                _combined.Add(move);
+                _extraStepDirs.Add(move);
             }
             return pieceData.moveRange;
         }
@@ -173,45 +176,44 @@ public class Piece : MonoBehaviour
     /// 移動可能なマス目をチェックする
     /// </summary>
     /// <returns>移動可能なマス目のリスト</returns>
-    private List<Vector2Int> CheckMovablePositions(Vector2Int[] moves)
+    private void CheckMovablePositions(Vector2Int[] moves)
     {
-        MovablePositions.Clear();
+        movablePositions.Clear();
         
-        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(BasePieceType);
+        PieceData pieceData = ShogiManager.instance.pieceDatabase.GetPieceData(basePieceType);
         
         foreach (Vector2Int dir in moves)
         {
             if (!pieceData.canStraightMove)
             {
-                Vector2Int target = _currentPos + dir * _moveDistance;
-                AddPiecePos(target, MovablePositions);
+                Vector2Int target = currentPos + dir * _moveDistance;
+                AddPiecePos(target);
             }
             else if (pieceData.canStraightMove)
             {
                 // 直線移動の場合、移動可能なマス目を全てチェック
                 for (int i = 1; i < 9; i++)
                 {
-                    Vector2Int target = _currentPos + dir * i * _moveDistance;
-                    if (!AddPiecePos(target, MovablePositions)) break;  // すでに駒がある場合はそれ以上移動しない
+                    Vector2Int target = currentPos + dir * i * _moveDistance;
+                    if (!AddPiecePos(target)) break;  // すでに駒がある場合はそれ以上移動しない
                 }
                 // 成駒時の動き方を追加
                 if (_isPromoted)
                 {
-                    foreach (Vector2Int promDir in _combined)
+                    foreach (Vector2Int promDir in _extraStepDirs)
                     {
-                        Vector2Int target = _currentPos + promDir * _moveDistance;
-                        AddPiecePos(target, MovablePositions);
+                        Vector2Int target = currentPos + promDir * _moveDistance;
+                        AddPiecePos(target);
                     }
                 }
             }
         }
-        return MovablePositions;
     }
 
     /// <summary>
     /// movablePositionsに移動可能なマス目を追加する
     /// </summary>
-    private bool AddPiecePos(Vector2Int pos, List<Vector2Int> movablePositions)
+    private bool AddPiecePos(Vector2Int pos)
     {
         const int boardMin = 1;
         const int boardMax = 9;
@@ -219,8 +221,8 @@ public class Piece : MonoBehaviour
         if (pos.x < boardMin || pos.x > boardMax || pos.y < boardMin || pos.y > boardMax) return false;
 
         // すでに駒があるかチェック
-        PieceType checkPiece = ShogiManager.Instance.GetPieceTypeAt(pos);
-        Piece checkPieceObj = ShogiManager.Instance.GetPieceAt(pos);
+        PieceType checkPiece = ShogiManager.instance.GetPieceTypeAt(pos);
+        Piece checkPieceObj = ShogiManager.instance.GetPieceAt(pos);
 
         // 空マス or 相手の駒なら移動可能
         if (checkPiece == PieceType.None)
@@ -228,7 +230,7 @@ public class Piece : MonoBehaviour
             movablePositions.Add(pos);
             return true;
         }
-        else if (checkPieceObj != null && checkPieceObj.PieceTurn != PieceTurn)
+        else if (checkPieceObj != null && checkPieceObj.pieceTurn != pieceTurn)
         {
             if (checkPiece == PieceType.玉将)
             {
@@ -256,25 +258,25 @@ public class Piece : MonoBehaviour
     /// </summary>
     private async UniTask CheckPromotion()
     {
-        PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(BasePieceType);
+        PieceData pieceData = ShogiManager.instance.pieceDatabase.GetPieceData(basePieceType);
         if (pieceData.promotionType != PromotionType.None && !_isPromoted)
         {
             switch (pieceData.pieceType)
             {
                 case PieceType.歩兵:
                 case PieceType.香車:
-                    if (PieceTurn == Turn.先手 && _currentPos.y >= 9 ||
-                        PieceTurn == Turn.後手 && _currentPos.y <= 1)
+                    if (pieceTurn == Turn.先手 && currentPos.y >= 9 ||
+                        pieceTurn == Turn.後手 && currentPos.y <= 1)
                     {
-                        ShogiManager.Instance.PromotePiece(_currentPos, pieceData);
+                        ShogiManager.instance.PromotePiece(currentPos, pieceData);
                         return;
                     }
                     break;
                 case PieceType.桂馬:
-                    if (PieceTurn == Turn.先手 && _currentPos.y >= 8 ||
-                        PieceTurn == Turn.後手 && _currentPos.y <= 2)
+                    if (pieceTurn == Turn.先手 && currentPos.y >= 8 ||
+                        pieceTurn == Turn.後手 && currentPos.y <= 2)
                     {
-                        ShogiManager.Instance.PromotePiece(_currentPos, pieceData);
+                        ShogiManager.instance.PromotePiece(currentPos, pieceData);
                         return;
                     }
                     break;
@@ -282,8 +284,8 @@ public class Piece : MonoBehaviour
             
             // 現在、敵陣にいるかどうか
             bool nowInEnemyCamp =
-                PieceTurn == Turn.先手 && _currentPos.y >= 7 ||
-                PieceTurn == Turn.後手 && _currentPos.y <= 3;
+                pieceTurn == Turn.先手 && currentPos.y >= 7 ||
+                pieceTurn == Turn.後手 && currentPos.y <= 3;
 
             // 前のターン、敵陣にいたかどうか
             bool leftEnemyCampThisTurn = _wasInEnemyCamp && !nowInEnemyCamp;
@@ -292,11 +294,11 @@ public class Piece : MonoBehaviour
             if (nowInEnemyCamp || leftEnemyCampThisTurn)
             {
                 // 成るかどうかのUIを表示
-                bool isPromote = await PromotionUIManager.instance.ShowAsync(_currentPos, _unpromSprite, _promSprite);
+                bool isPromote = await PromotionUIManager.instance.ShowAsync(currentPos, _unpromSprite, _promSprite);
                 if (isPromote)
                 {
                     // 成る処理
-                    ShogiManager.Instance.PromotePiece(_currentPos, pieceData);
+                    ShogiManager.instance.PromotePiece(currentPos, pieceData);
                 }
                 else if (nowInEnemyCamp)
                 {
