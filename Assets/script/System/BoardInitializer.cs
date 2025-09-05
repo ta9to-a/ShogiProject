@@ -28,16 +28,7 @@ public class BoardInitializer : MonoBehaviour
     [Tooltip("持ち駒の縦幅")]
     [SerializeField] private float capturePieceHeight = 1.0f; // 持ち駒の縦幅
 
-    void Start()
-    {
-        DefaultPosition();
-        CreateCapturePieces(Turn.先手);
-        CreateCapturePieces(Turn.後手);
-        CapturePieceUIManager.instance.Initialize();
-        ShogiManager.instance.SetGame();
-    }
-
-    private void DefaultPosition()
+    public void DefaultPosition()
     {
         CreateLinePieces(PieceType.歩兵, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 3, 7 , false);
         CreateLinePieces(PieceType.香車, new[] { 1, 9 }, 1, 9 , false);
@@ -47,6 +38,12 @@ public class BoardInitializer : MonoBehaviour
         CreateMirroredPieces(PieceType.角行, new Vector2Int(2, 2), new Vector2Int(8, 8), false);
         CreateMirroredPieces(PieceType.飛車, new Vector2Int(8, 2), new Vector2Int(2, 8), false);
         CreateLinePieces(PieceType.玉将, new[] { 5 }, 1, 9, false);
+    }
+
+    public void CreateCapturePieces()
+    {
+        CreateCapturePieces(Turn.先手);
+        CreateCapturePieces(Turn.後手);
     }
 
     /// <summary>
