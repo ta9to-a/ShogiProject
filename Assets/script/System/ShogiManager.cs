@@ -24,19 +24,13 @@ public class ShogiManager : MonoBehaviour
     
     private int _recMoveCount; // 手数のカウント
 
-    private Dictionary<Turn, Piece> _kingObj = new();
+    private Dictionary<Turn, Piece> _kingObj = new();   // 玉の位置を管理
+    private Dictionary<Turn, Dictionary<Vector2Int, List<Piece>>> _allMovesCache = new(); // 全ての駒の移動可能範囲
     
     /*
     public static bool CanSelect; // 選択状況を管理するフラグ
 
-    private bool? _playerChoice;
-    private Camera _camera;
-
-    Piece _piece;
-    [SerializeField] HeldPieceManager heldPieceManager; // 持ち駒管理
-    [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理
-
-    bool _isFastPromote; // 成駒の選択がされているか*/
+    [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理*/
     
     [Header("持ち駒の管理")]
     [SerializeField] private BoardInitializer boardInit; // 持ち駒
@@ -65,6 +59,9 @@ public class ShogiManager : MonoBehaviour
                 _boardState[x, y] = PieceType.None;
             }
         }
+        
+        _allMovesCache[Turn.先手] = new Dictionary<Vector2Int, List<Piece>>();
+        _allMovesCache[Turn.後手] = new Dictionary<Vector2Int, List<Piece>>();
     }
 
     private void Start()
@@ -183,21 +180,37 @@ public class ShogiManager : MonoBehaviour
     // TODO: 玉将の移動可能範囲を取得し、相手の駒の移動範囲と照合して詰みかどうかを判定
     private bool IsCheckmate()
     {
+        // 全ての駒の移動可能範囲を更新
+        UpdateMovePos();
+        
         // 王手されているかチェック
-        Turn? checkTurn = IsCheckOute();
-        if (checkTurn == null) return false; // 王手されていない場合
+        Turn? enemySideTurn = IsCheckOute();
+        if (enemySideTurn == null) return false; // 王手されていない場合
         
-        // 王手されている場合、詰みかどうかをチェック
-        // 1,玉が逃げられるか
-        Turn ownTurn = (checkTurn == Turn.先手) ? Turn.後手 : Turn.先手;
-        Dictionary<Vector2Int, List<Piece>> ownSideAllMoves = GetAllMoves(ownTurn); // 相手の全ての駒の移動可能範囲を取得
-        if (CanKingEscape(checkTurn.Value, ownSideAllMoves)) return false; // 玉が逃げられる場合
+        // 玉が逃げられるか
+        GetAllMoves(); // 全駒の移動マスを最新化してキャッシュ
+        if (CanKingEscape(enemySideTurn.Value)) return false; // 玉が逃げられる場合
         
-        // 2,王手駒を防げるか
-        // 3,王手駒を取れるか
-        // 4,合駒で防げるか
+        // 王手駒を取れるか
+        //if (CanGetOutePiece(enemySideTurn.Value)) return false; // 王手駒を取れる場合
+        
+        // 合駒で防げるか
         
         return true;
+    }
+
+    /// <summary>
+    /// 全ての駒の移動可能範囲を更新
+    /// </summary>
+    private void UpdateMovePos()
+    {
+        _allMovesCache[Turn.先手].Clear();
+        _allMovesCache[Turn.後手].Clear();
+        
+        foreach (Piece piece in _pieceObjects.Values)
+        {
+            piece.GetMovePoints();
+        }
     }
 
     /// <summary>
@@ -211,18 +224,17 @@ public class ShogiManager : MonoBehaviour
             Piece piece = kvp.Value;
             
             // 駒の移動可能範囲を取得
-            piece.GetMovePoints();
             List<Vector2Int> moves = piece.movablePositions;
             
             // 相手の玉の位置を取得
-            Turn objTurn = (piece.pieceTurn == Turn.先手) ? Turn.後手 : Turn.先手;
-            Piece kingPiece = _kingObj[objTurn];
+            Turn enemySideTurn = (piece.pieceTurn == Turn.先手) ? Turn.後手 : Turn.先手;
+            Piece kingPiece = _kingObj[enemySideTurn];
             
             // 玉の位置が移動可能範囲に含まれているかチェック
             if (moves.Contains(kingPiece.currentPos))
             {
                 Debug.Log(kingPiece.transform.name + "の玉が王手されています。");
-                return objTurn;
+                return enemySideTurn;
             }
         }
 
@@ -232,42 +244,51 @@ public class ShogiManager : MonoBehaviour
     /// <summary>
     /// 指定した手番の全ての駒の移動可能範囲を取得
     /// </summary>
-    private Dictionary<Vector2Int, List<Piece>> GetAllMoves(Turn turn)
+    private void GetAllMoves()
     {
-        Dictionary<Vector2Int, List<Piece>> allMoves = new();
-        
         foreach (var kvp in _pieceObjects)
         {
             Piece piece = kvp.Value;
-            if (piece.pieceTurn != turn) continue; // 指定した手番の駒のみ処理
+            Turn turn = piece.pieceTurn;
             
             foreach (Vector2Int move in piece.movablePositions)
             {
-                if (!allMoves.ContainsKey(move))
+                if (!_allMovesCache[turn].ContainsKey(move))
                 {
-                    allMoves[move] = new List<Piece>();
+                    _allMovesCache[turn][move] = new List<Piece>();
                 }
-                allMoves[move].Add(piece);
+                _allMovesCache[turn][move].Add(piece);
             }
         }
-
-        return allMoves;
     }
     
     /// <summary>
     /// 玉が逃げられるかチェック
     /// </summary>
-    private bool CanKingEscape(Turn turn, Dictionary<Vector2Int, List<Piece>> enemyAllMoves)
+    /// <param name="turn">王手されている玉のターン</param>
+    private bool CanKingEscape(Turn turn)
     {
         Piece kingPiece = _kingObj[turn];
+        
         foreach (Vector2Int move in kingPiece.movablePositions)
         {
-            if (!enemyAllMoves.ContainsKey(move))
+            Debug.Log(move);
+            if (!_allMovesCache[(turn == Turn.先手) ? Turn.後手 : Turn.先手].ContainsKey(move))
             {
                 return true; // 玉が逃げられる場合
             }
         }
         return false; // すべての移動先が敵の攻撃範囲
+    }
+    
+    /// <summary>
+    /// 王手駒を取る手段があるか
+    /// </summary>
+    private bool CanGetOutePiece(Turn turn)
+    {
+        // 王手駒の位置を取得
+        // それから自分たちの駒の移動可能範囲と照合
+        return false;
     }
     
     /// <summary>
@@ -335,7 +356,7 @@ public class ShogiManager : MonoBehaviour
         boardInit.CreatePiece(pieceType, pos, activePlayer, false);
         capturedPieceType[(int)pieceType]--;
         
-        Debug.Log("" + pieceType + "を指しました。");
+        Debug.Log(pieceType + "を指しました。");
         // 持ち駒のUIを更新
         CapturePieceUIManager.instance.ApplyVisualUI(pieceType, activePlayer);
     }
