@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
+using Cysharp.Threading.Tasks;
 
 public class ShogiManager : MonoBehaviour
 {
@@ -39,8 +41,7 @@ public class ShogiManager : MonoBehaviour
     [Header("駒のデータベース")]
     [SerializeField] public PieceDatabase pieceDatabase;
     [SerializeField] public PromotionDatabase promotionDatabase;
-    
-    
+
     private void Awake()
     {
         // シングルトンの初期化
@@ -135,8 +136,10 @@ public class ShogiManager : MonoBehaviour
     /// <summary>
     /// 選択の解除
     /// </summary>
-    public void CancelSelection()
+    public async void CancelSelection()
     {
+        await UniTask.Yield();
+        
         curSelPiece = null;
         moveHighlight.RemoveHighlight();
     }
@@ -190,9 +193,6 @@ public class ShogiManager : MonoBehaviour
         // 玉が逃げられるか
         GetAllMoves(); // 全駒の移動マスを最新化してキャッシュ
         if (CanKingEscape(enemySideTurn.Value)) return false; // 玉が逃げられる場合
-        
-        // 王手駒を取れるか
-        //if (CanGetOutePiece(enemySideTurn.Value)) return false; // 王手駒を取れる場合
         
         // 合駒で防げるか
         
@@ -269,26 +269,92 @@ public class ShogiManager : MonoBehaviour
     private bool CanKingEscape(Turn turn)
     {
         Piece kingPiece = _kingObj[turn];
+        bool isEscape = false;
         
-        foreach (Vector2Int move in kingPiece.movablePositions)
+        List<Vector2Int> kingMoves = new List<Vector2Int>(kingPiece.movablePositions);
+        foreach (Vector2Int move in kingMoves)
         {
-            Debug.Log(move);
-            if (!_allMovesCache[(turn == Turn.先手) ? Turn.後手 : Turn.先手].ContainsKey(move))
+            Debug.Log(move + "王の移動場所");
+            Turn enemyTurn = (turn == Turn.先手) ? Turn.後手 : Turn.先手;
+            if (!_allMovesCache[enemyTurn].ContainsKey(move))
             {
-                return true; // 玉が逃げられる場合
+                if (_pieceObjects.ContainsKey(move))
+                {
+                    Debug.Log(move);
+                    if (!CanGetOutePiece(turn, move)) continue;
+                }
+                isEscape = true;
             }
         }
+
+        if (isEscape) return true;
+        
         return false; // すべての移動先が敵の攻撃範囲
     }
-    
+
     /// <summary>
     /// 王手駒を取る手段があるか
     /// </summary>
-    private bool CanGetOutePiece(Turn turn)
+    private bool CanGetOutePiece(Turn turn, Vector2Int move)
     {
-        // 王手駒の位置を取得
-        // それから自分たちの駒の移動可能範囲と照合
+        if (_allMovesCache[turn].ContainsKey(move))
+        {
+            Debug.Log(move + "を取れる駒をチェックします");
+            foreach (Piece piece in _allMovesCache[turn][move])
+            {
+                // 取れる駒が玉なら
+                if (piece == _kingObj[turn])
+                {
+                    if (!IsKingSafeAfterMove(turn, move))
+                    {
+                        Debug.Log("玉で取れません");
+                        continue;
+                    }
+                }
+                return true;
+            }
+        }
+        
         return false;
+    }
+
+    /// <summary>
+    /// 指定した手番の駒を動かした後に玉が安全かチェック
+    /// </summary>
+    private bool IsKingSafeAfterMove(Turn turn, Vector2Int move)
+    {
+        Debug.Log("玉で取れるかチェックします");
+        // 現在の盤面状態を保存
+        PieceType[,] backupBoard = (PieceType[,])_boardState.Clone();
+        Dictionary<Vector2Int, Piece> backupPieces = new (_pieceObjects);
+        Debug.Log("盤面状態を保存しました");
+        
+        Piece king = _kingObj[turn];
+        Vector2Int originalPos = king.currentPos;
+        
+        // 仮想環境で駒を動かす
+        RemovePiece(originalPos);
+        PlacePiece(move, king.basePieceType, king);
+        king.SetPosition(move);
+        
+        UpdateMovePos();
+        GetAllMoves();
+        
+        Turn enemyTurn = (turn == Turn.先手) ? Turn.後手 : Turn.先手;
+        bool isSafe = !_allMovesCache[enemyTurn].ContainsKey(move);
+        
+        // 盤面状態を元に戻す
+        RemovePiece(move);
+        PlacePiece(originalPos, king.basePieceType, king);
+        king.SetPosition(originalPos);
+        _boardState = backupBoard;
+        _pieceObjects = backupPieces;
+        
+        UpdateMovePos();
+        GetAllMoves();
+        Debug.Log("盤面状態を復元しました");
+        
+        return isSafe;
     }
     
     /// <summary>

@@ -11,7 +11,8 @@ public class CapturePieceParent : MonoBehaviour
     public Turn capturePieceTurn;       // 駒のターン（先手 or 後手）
     
     private List<Vector2Int> _checkMovablePositions = new ();   // 設置可能なマス目のリスト
-    [SerializeField] public GameObject capturePieceChildPrefab;      // 持ち駒のプレハブ
+    
+    [SerializeField] public GameObject capturePieceChildPrefab; // 持ち駒のプレハブ
     
     public Sprite umPromSprite; // 成る前のスプライト
     
@@ -70,7 +71,7 @@ public class CapturePieceParent : MonoBehaviour
             {
                 ShogiManager.instance.curSelPiece = this.gameObject;
                 Debug.Log(ShogiManager.instance.curSelPiece.name + "が選択されました");
-                SettingCapturePiece();
+                DropPiece();
             }
             else
             {
@@ -80,7 +81,10 @@ public class CapturePieceParent : MonoBehaviour
         }
     }
     
-    public async void SettingCapturePiece()
+    /// <summary>
+    /// 持ち駒を指す
+    /// </summary>
+    public async void DropPiece()
     {
         // 持ち駒の設置可能なマス目のチェック
         CheckMovablePositions();
@@ -116,7 +120,7 @@ public class CapturePieceParent : MonoBehaviour
                     switch (capturePieceType)
                     {
                         case PieceType.歩兵:
-                            bool[] fuPosition = ShogiManager.instance.activePlayer == Turn.先手
+                            bool[] fuPosition = (ShogiManager.instance.activePlayer == Turn.先手)
                                 ? ShogiManager.instance.senteFuPosition
                                 : ShogiManager.instance.goteFuPosition;
                             if (position.y >= (capturePieceTurn == Turn.先手 ? 9 : 1) || fuPosition[position.x - 1])

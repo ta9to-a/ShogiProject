@@ -117,7 +117,6 @@ public class CapturePieceUIManager : MonoBehaviour
     /// <summary>
     /// 持ち駒を設置した際の処理
     /// </summary>
-    /// <param name="capturedPiece"></param>
     public void RemoveCapturedPiece(GameObject capturedPiece)
     {
         CapturePieceParent cp = capturedPiece.GetComponent<CapturePieceParent>();

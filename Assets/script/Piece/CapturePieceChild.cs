@@ -49,7 +49,7 @@ public class CapturePieceChild : MonoBehaviour
                 CapturePieceParent cp = typeParent.GetComponent<CapturePieceParent>();
                 if (cp != null)
                 {
-                    cp.SettingCapturePiece();
+                    cp.DropPiece();
                 }
             }
             else
