@@ -5,19 +5,19 @@ using UnityEngine;
 
 public class CapturePieceUIManager : MonoBehaviour
 {
-    public static CapturePieceUIManager instance { get; private set; }
+    public static CapturePieceUIManager Instance { get; private set; }
     
     public List<GameObject> capturePieceParent = new ();
     public Dictionary<(PieceType, Turn), List<GameObject>> CloneGroups = new(); // 駒のクローンをグループ
 
     private void Awake()
     {
-        if (instance != null)
+        if (Instance != null)
         {
             Destroy(gameObject);
             return;
         }
-        instance = this;
+        Instance = this;
     }
 
     /// <summary>

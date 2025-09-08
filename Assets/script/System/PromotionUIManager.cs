@@ -4,7 +4,7 @@ using Cysharp.Threading.Tasks;
 
 public class PromotionUIManager : MonoBehaviour
 {
-    public static PromotionUIManager instance { get; private set; }
+    public static PromotionUIManager Instance { get; private set; }
     
     [SerializeField] private GameObject panel;          // 成り・不成のUIパネル
     [SerializeField] private Button promoteButton;      // 成りボタン
@@ -14,13 +14,13 @@ public class PromotionUIManager : MonoBehaviour
     
     private void Awake()
     {
-        if (instance != null && instance != this)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
         
-        instance = this;
+        Instance = this;
         
         panel.SetActive(false);
     }
@@ -50,7 +50,7 @@ public class PromotionUIManager : MonoBehaviour
         );
         rectTransform.anchoredPosition = localPoint;
         // 先手と後手の向き設定
-        rectTransform.rotation = (ShogiManager.instance.activePlayer == Turn.先手) ?
+        rectTransform.rotation = (ShogiManager.Instance.ActivePlayer == Turn.先手) ?
             Quaternion.identity :
             Quaternion.Euler(0f, 0f, 180f);
         

@@ -82,7 +82,7 @@ public class BoardInitializer : MonoBehaviour
     /// </summary>
     public void CreatePiece(PieceType pieceType, Vector2Int position, Turn turn, bool isPromoted)
     {
-        PieceData data = ShogiManager.instance.pieceDatabase.GetPieceData(pieceType);
+        PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(pieceType);
         if (data == null)
         {
             Debug.LogError($"PieceDataが見つかりませんでした : {pieceType}");
@@ -116,7 +116,7 @@ public class BoardInitializer : MonoBehaviour
         pieceScript.ApplyStatePiece(pieceType, position, isPromoted, unpromotedSprite, promotedSprite);
         pieceObj.GetComponent<SpriteRenderer>().sortingOrder = 1;
         
-        ShogiManager.instance.PlacePiece(position, pieceType, pieceObj.GetComponent<Piece>());
+        ShogiManager.Instance.PlacePiece(position, pieceType, pieceObj.GetComponent<Piece>());
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public class BoardInitializer : MonoBehaviour
                 PieceType? type = pieceLayout[row][col];
                 if (!type.HasValue) continue;
                 
-                PieceData data = ShogiManager.instance.pieceDatabase.GetPieceData(type.Value);
+                PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(type.Value);
                 Vector2 pos = new Vector2(
                     basePos.x + col * capturePieceWidth * (turn == Turn.先手 ? 1f : -1f),
                     basePos.y + row * capturePieceHeight * (turn == Turn.先手 ? -1f : 1f)
@@ -166,7 +166,9 @@ public class BoardInitializer : MonoBehaviour
         obj.layer = LayerMask.NameToLayer("CapturePiece");
         obj.tag = (turn == Turn.先手) ? "Sente" : "Gote";
         
-        CapturePieceUIManager.instance.capturePieceParent.Add(obj);
+        CapturePieceUIManager.Instance.capturePieceParent.Add(obj);
         obj.GetComponent<CapturePieceParent>().ApplyStateCapturePiece(pieceData.pieceType, capPieceRenderer.sprite);
+        
+        ShogiManager.Instance.CapturePieceObjects[turn].Add(obj.GetComponent<CapturePieceParent>());
     }
 }

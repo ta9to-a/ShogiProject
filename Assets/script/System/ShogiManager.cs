@@ -8,23 +8,24 @@ using Cysharp.Threading.Tasks;
 public class ShogiManager : MonoBehaviour
 {
     // シングルトン管理
-    public static ShogiManager instance { get; private set; }
+    public static ShogiManager Instance { get; private set; }
     
-    public Turn activePlayer { get; private set; }                  // 現在の手番（先手 or 後手）
+    public Turn ActivePlayer { get; private set; }                  // 現在の手番（先手 or 後手）
     private PieceType[,] _boardState = new PieceType[9, 9];         // 盤面の状態を管理
     private Dictionary<Vector2Int, Piece> _pieceObjects = new ();   // 盤面上の駒オブジェクト
+    public Dictionary<Turn, List<CapturePieceParent>> CapturePieceObjects = new ();         // 持ち駒のオブジェクト
     
     public GameObject curSelPiece; // 現在選択されている駒
     
     // 持ち駒の状態を管理
-    public int[] senteCapturedPieceType { get; private set; } = new int[7];   // 先手の持ち駒の種類ごとの数
-    public int[] goteCapturedPieceType { get; private set; } = new int[7];    // 後手の持ち駒の種類ごとの数
+    public int[] SenteCapturedPieceType { get; private set; } = new int[7];   // 先手の持ち駒の種類ごとの数
+    public int[] GoteCapturedPieceType { get; private set; } = new int[7];    // 後手の持ち駒の種類ごとの数
 
     // 二歩チェック用の歩の列情報
-    public bool[] senteFuPosition { get; private set; } = new bool[9]; // 先手の歩の列状態
-    public bool[] goteFuPosition { get; private set; } = new bool[9];  // 後手の歩の列状態
+    public bool[] SenteFuPosition { get; private set; } = new bool[9]; // 先手の歩の列状態
+    public bool[] GoteFuPosition { get; private set; } = new bool[9];  // 後手の歩の列状態
     
-    private int _recMoveCount; // 手数のカウント
+    public int RecMoveCount { get; private set; } // 手数のカウント
 
     private Dictionary<Turn, Piece> _kingObj = new();   // 玉の位置を管理
     private Dictionary<Turn, Dictionary<Vector2Int, List<Piece>>> _allMovesCache = new(); // 全ての駒の移動可能範囲
@@ -45,12 +46,12 @@ public class ShogiManager : MonoBehaviour
     private void Awake()
     {
         // シングルトンの初期化
-        if (instance != null && instance != this)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
         }
-        instance = this;
+        Instance = this;
         
         // 盤面の初期化
         for (int x = 0; x < 9; x++)
@@ -63,6 +64,8 @@ public class ShogiManager : MonoBehaviour
         
         _allMovesCache[Turn.先手] = new Dictionary<Vector2Int, List<Piece>>();
         _allMovesCache[Turn.後手] = new Dictionary<Vector2Int, List<Piece>>();
+        CapturePieceObjects[Turn.先手] = new List<CapturePieceParent>();
+        CapturePieceObjects[Turn.後手] = new List<CapturePieceParent>();
     }
 
     private void Start()
@@ -78,7 +81,7 @@ public class ShogiManager : MonoBehaviour
         boardInit.DefaultPosition();
         boardInit.CreateCapturePieces();
         
-        CapturePieceUIManager.instance.Initialize();
+        CapturePieceUIManager.Instance.Initialize();
         
         KingRegister();
         EndTurnPhase(null);
@@ -93,9 +96,9 @@ public class ShogiManager : MonoBehaviour
         foreach (var kvp in _pieceObjects)
         {
             Piece kingPiece = kvp.Value;
-            if (kingPiece.basePieceType == PieceType.玉将)
+            if (kingPiece.BasePieceType == PieceType.玉将)
             {
-                _kingObj[kingPiece.pieceTurn] = kingPiece;
+                _kingObj[kingPiece.PieceTurn] = kingPiece;
             }
         }
     }
@@ -112,18 +115,14 @@ public class ShogiManager : MonoBehaviour
         AddKifuEntry();
         
         // 詰み状態ではないかのチェック
-        if (IsCheckmate())
-        {
-            Debug.Log("決着がつきました。");
-            return;
-        }
+        if (IsCheckmate()) return;
         
-        _recMoveCount++;
+        RecMoveCount++;
         
         // 手番を切り替える
-        if (_recMoveCount >= 2)
+        if (RecMoveCount >= 2)
         {
-            activePlayer = (activePlayer == Turn.先手) ? Turn.後手 : Turn.先手;
+            ActivePlayer = (ActivePlayer == Turn.先手) ? Turn.後手 : Turn.先手;
             
             CancelSelection();
             if (toPos.HasValue)
@@ -160,8 +159,8 @@ public class ShogiManager : MonoBehaviour
         for (int x = 0; x < 9; x++)
         {
             // 先手と後手の歩の列を初期化
-            senteFuPosition[x] = false; // 先手の歩の列を初期化
-            goteFuPosition[x] = false;  // 後手の歩の列を初期化
+            SenteFuPosition[x] = false; // 先手の歩の列を初期化
+            GoteFuPosition[x] = false;  // 後手の歩の列を初期化
             
             // その列に歩があるかチェック
             for (int y = 0; y < 9; y++)
@@ -170,7 +169,7 @@ public class ShogiManager : MonoBehaviour
                 if (pieceType != PieceType.歩兵) continue;
                 
                 Piece fuObj = GetPieceAt(new Vector2Int(x + 1, y + 1));
-                bool[] fuPosition = (fuObj.pieceTurn == Turn.先手) ? senteFuPosition : goteFuPosition;
+                bool[] fuPosition = (fuObj.PieceTurn == Turn.先手) ? SenteFuPosition : GoteFuPosition;
                     
                 fuPosition[x] = true;
             }
@@ -194,8 +193,10 @@ public class ShogiManager : MonoBehaviour
         GetAllMoves(); // 全駒の移動マスを最新化してキャッシュ
         if (CanKingEscape(enemySideTurn.Value)) return false; // 玉が逃げられる場合
         
-        // 合駒で防げるか
+        // 直線移動する駒からの王手を遮断できるか
+        if (CanAvoidCheck(enemySideTurn.Value)) return false;
         
+        Debug.Log("詰みです。");
         return true;
     }
 
@@ -207,9 +208,18 @@ public class ShogiManager : MonoBehaviour
         _allMovesCache[Turn.先手].Clear();
         _allMovesCache[Turn.後手].Clear();
         
+        // 全ての駒の移動可能範囲を更新
         foreach (Piece piece in _pieceObjects.Values)
         {
             piece.GetMovePoints();
+        }
+        // 全ての持ち駒の指せる位置を更新
+        foreach (var captureList in CapturePieceObjects.Values)
+        {
+            foreach (var capturePiece in captureList)
+            {
+                capturePiece.CheckDroppablePositions();
+            }
         }
     }
 
@@ -224,10 +234,10 @@ public class ShogiManager : MonoBehaviour
             Piece piece = kvp.Value;
             
             // 駒の移動可能範囲を取得
-            List<Vector2Int> moves = piece.movablePositions;
+            List<Vector2Int> moves = piece.MovablePositions;
             
             // 相手の玉の位置を取得
-            Turn enemySideTurn = (piece.pieceTurn == Turn.先手) ? Turn.後手 : Turn.先手;
+            Turn enemySideTurn = (piece.PieceTurn == Turn.先手) ? Turn.後手 : Turn.先手;
             Piece kingPiece = _kingObj[enemySideTurn];
             
             // 玉の位置が移動可能範囲に含まれているかチェック
@@ -242,16 +252,16 @@ public class ShogiManager : MonoBehaviour
     }
 
     /// <summary>
-    /// 指定した手番の全ての駒の移動可能範囲を取得
+    /// 全ての駒の移動可能範囲を取得
     /// </summary>
     private void GetAllMoves()
     {
         foreach (var kvp in _pieceObjects)
         {
             Piece piece = kvp.Value;
-            Turn turn = piece.pieceTurn;
+            Turn turn = piece.PieceTurn;
             
-            foreach (Vector2Int move in piece.movablePositions)
+            foreach (Vector2Int move in piece.MovablePositions)
             {
                 if (!_allMovesCache[turn].ContainsKey(move))
                 {
@@ -271,16 +281,14 @@ public class ShogiManager : MonoBehaviour
         Piece kingPiece = _kingObj[turn];
         bool isEscape = false;
         
-        List<Vector2Int> kingMoves = new List<Vector2Int>(kingPiece.movablePositions);
+        List<Vector2Int> kingMoves = new List<Vector2Int>(kingPiece.MovablePositions);
         foreach (Vector2Int move in kingMoves)
         {
-            Debug.Log(move + "王の移動場所");
             Turn enemyTurn = (turn == Turn.先手) ? Turn.後手 : Turn.先手;
             if (!_allMovesCache[enemyTurn].ContainsKey(move))
             {
                 if (_pieceObjects.ContainsKey(move))
                 {
-                    Debug.Log(move);
                     if (!CanGetOutePiece(turn, move)) continue;
                 }
                 isEscape = true;
@@ -299,62 +307,122 @@ public class ShogiManager : MonoBehaviour
     {
         if (_allMovesCache[turn].ContainsKey(move))
         {
-            Debug.Log(move + "を取れる駒をチェックします");
             foreach (Piece piece in _allMovesCache[turn][move])
             {
                 // 取れる駒が玉なら
                 if (piece == _kingObj[turn])
                 {
-                    if (!IsKingSafeAfterMove(turn, move))
+                    if (!IsKingSafeAfterMove(turn, piece, move))
                     {
-                        Debug.Log("玉で取れません");
                         continue;
                     }
                 }
                 return true;
             }
         }
-        
         return false;
     }
 
     /// <summary>
     /// 指定した手番の駒を動かした後に玉が安全かチェック
     /// </summary>
-    private bool IsKingSafeAfterMove(Turn turn, Vector2Int move)
+    private bool IsKingSafeAfterMove(Turn turn, Piece pieceObj, Vector2Int move)
     {
-        Debug.Log("玉で取れるかチェックします");
         // 現在の盤面状態を保存
         PieceType[,] backupBoard = (PieceType[,])_boardState.Clone();
         Dictionary<Vector2Int, Piece> backupPieces = new (_pieceObjects);
-        Debug.Log("盤面状態を保存しました");
         
-        Piece king = _kingObj[turn];
-        Vector2Int originalPos = king.currentPos;
+        Vector2Int originalPos = pieceObj.currentPos;
         
         // 仮想環境で駒を動かす
         RemovePiece(originalPos);
-        PlacePiece(move, king.basePieceType, king);
-        king.SetPosition(move);
+        PlacePiece(move, pieceObj.BasePieceType, pieceObj);
+        pieceObj.SetPosition(move);
         
         UpdateMovePos();
         GetAllMoves();
         
         Turn enemyTurn = (turn == Turn.先手) ? Turn.後手 : Turn.先手;
-        bool isSafe = !_allMovesCache[enemyTurn].ContainsKey(move);
+        Piece kingPiece = _kingObj[turn];
+        bool isSafe = !_allMovesCache[enemyTurn].ContainsKey(kingPiece.currentPos);
         
         // 盤面状態を元に戻す
         RemovePiece(move);
-        PlacePiece(originalPos, king.basePieceType, king);
-        king.SetPosition(originalPos);
+        PlacePiece(originalPos, pieceObj.BasePieceType, pieceObj);
+        pieceObj.SetPosition(originalPos);
         _boardState = backupBoard;
         _pieceObjects = backupPieces;
         
         UpdateMovePos();
         GetAllMoves();
-        Debug.Log("盤面状態を復元しました");
         
         return isSafe;
+    }
+
+    /// <summary>
+    /// 直線移動する駒の王手を遮断できるかチェック
+    /// </summary>
+    private bool CanAvoidCheck(Turn turn)
+    {
+        Piece king = _kingObj[turn];
+        List<Piece> outePieces = _allMovesCache[(turn == Turn.先手) ? Turn.後手 : Turn.先手][king.currentPos];
+        
+        foreach (Piece outePiece in outePieces)
+        {
+            PieceData pieceData = pieceDatabase.GetPieceData(outePiece.BasePieceType);
+            if (!pieceData.canStraightMove) continue; // 直線移動しない駒はスキップ
+            
+            // 王手している駒と玉の位置から方向を計算
+            Vector2Int dir = new Vector2Int(
+                Math.Sign(king.currentPos.x - outePiece.currentPos.x),
+                Math.Sign(king.currentPos.y - outePiece.currentPos.y)
+            );
+            
+            Debug.Log("方向: " + dir);
+            Vector2Int checkPos = outePiece.currentPos + dir;
+            
+            while (checkPos != king.currentPos)
+            {
+                Debug.Log("チェック位置: " + checkPos);
+                
+                // 駒の移動で遮断できるかチェック
+                if (_allMovesCache[turn].ContainsKey(checkPos))
+                {
+                    foreach (Piece piece in _allMovesCache[turn][checkPos])
+                    {
+                        if (piece == king) continue;
+                        // 遮断できる駒を置いたとき別の駒が王手していないかチェック
+                        Debug.Log("遮断可能な駒: " + piece.name);
+                        if (IsKingSafeAfterMove(turn, piece, checkPos))
+                        {
+                            Debug.Log("遮断可能: " + piece.name + " を " + checkPos + " に移動");
+                            return true;
+                        }
+                    }
+                }
+                
+                // 持ち駒を指して遮断できるかチェック
+                foreach (var capturePiece in CapturePieceObjects[turn])
+                {
+                    int pieceCount = (turn == Turn.先手) ? 
+                        SenteCapturedPieceType[(int)capturePiece.capturePieceType] : 
+                        GoteCapturedPieceType[(int)capturePiece.capturePieceType];
+                    
+                    if (pieceCount <= 0) continue; // 持ち駒がない場合はスキップ
+                    
+                    if (capturePiece.checkMovablePositions.Contains(checkPos))
+                    {
+                        Debug.Log("遮断可能な持ち駒: " + capturePiece.name);
+                        return true;
+                    }
+                }
+                
+                // 次のマスへ
+                checkPos += dir;
+            }
+        }
+        
+        return false;
     }
     
     /// <summary>
@@ -390,16 +458,16 @@ public class ShogiManager : MonoBehaviour
     public void AddCapturedPiece(Vector2Int pos)
     {
         Piece enemyPiece = GetPieceAt(pos);
-        int[] pieceCount = (activePlayer == Turn.先手) ? senteCapturedPieceType : goteCapturedPieceType;
+        int[] pieceCount = (ActivePlayer == Turn.先手) ? SenteCapturedPieceType : GoteCapturedPieceType;
         // 駒の種類を取得
         PieceType pieceType = GetPieceTypeAt(pos);
         if (pieceType != PieceType.None)
         {
-            PieceType basePieceType = enemyPiece.basePieceType;
+            PieceType basePieceType = enemyPiece.BasePieceType;
             // 駒の種類に応じてカウントを増やす
             pieceCount[(int)basePieceType]++;
             
-            CapturePieceUIManager.instance.ApplyVisualUI(basePieceType, activePlayer);
+            CapturePieceUIManager.Instance.ApplyVisualUI(basePieceType, ActivePlayer);
             
             // 駒オブジェクトを削除
             Destroy(enemyPiece.gameObject);
@@ -414,17 +482,17 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public void SetCapturedPiece(PieceType pieceType, Vector2Int pos)
     {
-        int[] capturedPieceType = (activePlayer == Turn.先手) ? 
-            senteCapturedPieceType : 
-            goteCapturedPieceType;
+        int[] capturedPieceType = (ActivePlayer == Turn.先手) ? 
+            SenteCapturedPieceType : 
+            GoteCapturedPieceType;
         
         // 持ち駒の数を指す
-        boardInit.CreatePiece(pieceType, pos, activePlayer, false);
+        boardInit.CreatePiece(pieceType, pos, ActivePlayer, false);
         capturedPieceType[(int)pieceType]--;
         
         Debug.Log(pieceType + "を指しました。");
         // 持ち駒のUIを更新
-        CapturePieceUIManager.instance.ApplyVisualUI(pieceType, activePlayer);
+        CapturePieceUIManager.Instance.ApplyVisualUI(pieceType, ActivePlayer);
     }
 
     /// <summary>

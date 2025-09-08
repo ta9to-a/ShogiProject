@@ -79,8 +79,10 @@ public class MoveHighlight : MonoBehaviour
         }
         _highlights.Clear();
         
-        // TODO: 点滅を止める
-        _isChanging = true;
+        if (ShogiManager.Instance.RecMoveCount >= 2)
+        {
+            _isChanging = true;
+        }
     }
     
     /// <summary>
