@@ -66,9 +66,9 @@ public class MoveHighlight : MonoBehaviour
     }
     
     /// <summary>
-    /// ハイライトを非表示にする
+    /// 移動可能なマス目のハイライトを非表示にする
     /// </summary>
-    public void RemoveHighlight()
+    public void RemoveCanMovePosHighlight()
     {
         foreach (var point in _highlights)
         {
@@ -78,11 +78,17 @@ public class MoveHighlight : MonoBehaviour
             }
         }
         _highlights.Clear();
+    }
+    
+    /// <summary>
+    /// 移動可能なマス目のハイライトを非表示にし、最後に移動したマス目のハイライトを点滅させる
+    /// </summary>
+    public void RemoveHighlight()
+    {
+        RemoveCanMovePosHighlight();
         
-        if (ShogiManager.Instance.RecMoveCount >= 2)
-        {
-            _isChanging = true;
-        }
+        if (ShogiManager.Instance.RecMoveCount <= 1) return;
+        _isChanging = true;
     }
     
     /// <summary>

@@ -13,7 +13,7 @@ public class Piece : MonoBehaviour
     public Vector2Int currentPos;      // 駒の現在位置
     
     private int _moveDistance;          // 駒の移動方向（先手は1、後手は-1）
-    private bool _isPromoted;           // 駒が成り駒かどうか
+    public bool isPromoted;           // 駒が成り駒かどうか
     private bool _wasInEnemyCamp;       // 前のターンで敵陣にいたかどうか
     
     public List<Vector2Int> MovablePositions { get; private set; } = new ();    // 駒の移動可能なマス目のリスト
@@ -27,11 +27,11 @@ public class Piece : MonoBehaviour
     /// </summary>
     /// <param name="pieceType">駒の種類</param>
     /// <param name="position">駒の場所</param>
-    /// <param name="isPromoted">成るか否か</param>
+    /// <param name="isPromote">成るか否か</param>
     /// <param name="unpromSprite">成る前のスプライト</param>
     /// <param name="promoSprite">成り時のスプライト</param>
     public void ApplyStatePiece
-        (PieceType pieceType, Vector2Int position, bool isPromoted, Sprite unpromSprite, Sprite promoSprite)
+        (PieceType pieceType, Vector2Int position, bool isPromote, Sprite unpromSprite, Sprite promoSprite)
     {
         BasePieceType = pieceType;
         
@@ -40,7 +40,7 @@ public class Piece : MonoBehaviour
         _promSprite = promoSprite;
         
         Sprite currentSprite =
-            !isPromoted ? unpromSprite : promoSprite;
+            !isPromote ? unpromSprite : promoSprite;
         GetComponent<SpriteRenderer>().sprite = currentSprite;
         
         // 先手と後手のタグを設定
@@ -57,7 +57,7 @@ public class Piece : MonoBehaviour
             _moveDistance = -1;
         }
         
-        _isPromoted = isPromoted; // 駒が成り駒かどうか
+        this.isPromoted = isPromote; // 駒が成り駒かどうか
         _wasInEnemyCamp = false;
 
         // 駒の初期位置を設定
@@ -78,7 +78,7 @@ public class Piece : MonoBehaviour
     /// </summary>
     public void PromotePiece(PieceData piece)
     {
-        _isPromoted = true;
+        isPromoted = true;
         _currentPieceType = piece.promotedType; // 駒の種類を更新
         GetComponent<SpriteRenderer>().sprite = _promSprite;
         Debug.Log("駒が成りました: " + _currentPieceType);
@@ -155,7 +155,7 @@ public class Piece : MonoBehaviour
         PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(BasePieceType);
         
         // 駒がなっていない、もしくは成駒動作が存在しない場合
-        if (!_isPromoted || pieceData.promotionType == PromotionType.None) return pieceData.moveRange;
+        if (!isPromoted || pieceData.promotionType == PromotionType.None) return pieceData.moveRange;
 
         // 成駒のデータを取得
         PromotionData promotionData = ShogiManager.Instance.promotionDatabase.GetPromotionData(pieceData.promotionType);
@@ -198,7 +198,7 @@ public class Piece : MonoBehaviour
                     if (!AddPiecePos(target)) break;  // すでに駒がある場合はそれ以上移動しない
                 }
                 // 成駒時の動き方を追加
-                if (_isPromoted)
+                if (isPromoted)
                 {
                     foreach (Vector2Int promDir in _extraStepDirs)
                     {
@@ -259,7 +259,7 @@ public class Piece : MonoBehaviour
     private async UniTask CheckPromotion()
     {
         PieceData pieceData = ShogiManager.Instance.pieceDatabase.GetPieceData(BasePieceType);
-        if (pieceData.promotionType != PromotionType.None && !_isPromoted)
+        if (pieceData.promotionType != PromotionType.None && !isPromoted)
         {
             switch (pieceData.pieceType)
             {

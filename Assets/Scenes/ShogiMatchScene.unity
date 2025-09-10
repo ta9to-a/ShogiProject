@@ -1380,6 +1380,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2035514904}
   - component: {fileID: 2035514908}
+  - component: {fileID: 2035514909}
   m_Layer: 0
   m_Name: System Manager
   m_TagString: Untagged
@@ -1419,6 +1420,18 @@ MonoBehaviour:
   moveHighlight: {fileID: 128281046}
   pieceDatabase: {fileID: 11400000, guid: 3e1aa3e3e9ca64414906e8f9c17b3ff6, type: 2}
   promotionDatabase: {fileID: 11400000, guid: d655c5a1b11bc4452aba95807e72800f, type: 2}
+--- !u!114 &2035514909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2035514902}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3085cf290cb1e4191b85b7143579e962, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
