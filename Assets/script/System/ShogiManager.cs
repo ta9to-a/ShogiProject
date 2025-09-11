@@ -30,14 +30,17 @@ public class ShogiManager : MonoBehaviour
     private Dictionary<Turn, Piece> _kingObj = new();   // 玉のオブジェクトを管理
     private Dictionary<Turn, Dictionary<Vector2Int, List<Piece>>> _allMovesCache = new(); // 全ての駒の移動可能範囲
     
+    private UsiMoveData _data;
+    
     /*
     public static bool CanSelect; // 選択状況を管理するフラグ
 
     [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理*/
     
     [Header("持ち駒の管理")]
-    [SerializeField] private BoardInitializer boardInit; // 持ち駒
-    [SerializeField] public MoveHighlight moveHighlight; // 駒の移動可能範囲ハイライト
+    [SerializeField] private BoardInitializer boardInit;    // 持ち駒
+    [SerializeField] public MoveHighlight moveHighlight;    // 駒の移動可能範囲ハイライト
+    [SerializeField] private UsiEngineConnector usiEngine;  // USIエンジン接続
     
     [Header("駒のデータベース")]
     [SerializeField] public PieceDatabase pieceDatabase;
@@ -53,16 +56,11 @@ public class ShogiManager : MonoBehaviour
         }
         Instance = this;
     }
-
-    private void Start()
-    {
-        SetGame();
-    }
     
     /// <summary>
     /// ゲームの開始
     /// </summary>
-    private void SetGame()
+    public void SetGame()
     {
         // 盤面の初期化
         InitializeBoard();
@@ -70,9 +68,13 @@ public class ShogiManager : MonoBehaviour
         // 駒の初期配置
         switch (GameModeManager.Instance.CurrentGameMode)
         {
-            case GameModeManager.GameMode.PlayerVsAI:
             case GameModeManager.GameMode.PlayerVsPlayer:
                 boardInit.DefaultPosition();
+                break;
+            case GameModeManager.GameMode.PlayerVsAI:
+                boardInit.DefaultPosition();
+                usiEngine.StartEngin();
+                usiEngine.SetStartPosition();
                 break;
             /*case GameMode.Mode.詰将棋:
                 boardInit.SetTsumeShogiPosition();
@@ -116,17 +118,14 @@ public class ShogiManager : MonoBehaviour
         moveHighlight.RemoveHighlight();
         
         _kingObj.Clear();
-        _allMovesCache[Turn.先手].Clear();
-        _allMovesCache[Turn.後手].Clear();
+        
         _allMovesCache[Turn.先手] = new Dictionary<Vector2Int, List<Piece>>();
         _allMovesCache[Turn.後手] = new Dictionary<Vector2Int, List<Piece>>();
         
-        CapturePieceObjects[Turn.先手].Clear();
-        CapturePieceObjects[Turn.後手].Clear();
         CapturePieceObjects[Turn.先手] = new List<CapturePieceParent>();
         CapturePieceObjects[Turn.後手] = new List<CapturePieceParent>();
         
-        Debug.Log("盤面を初期化しました。");
+        Debug.Log("盤面の初期化が完了しました。");
     }
     
     /// <summary>
@@ -170,6 +169,14 @@ public class ShogiManager : MonoBehaviour
 
         CancelSelection();
         moveHighlight.SetLastMoveHighlight(toPos);
+        
+        // AIのターンの場合、エンジンに指し手を要求
+        if (GameModeManager.Instance.CurrentGameMode == GameModeManager.GameMode.PlayerVsAI &&
+            ActivePlayer == Turn.後手)
+        {
+            Debug.Log("手を送信");
+            SendMoveToEngine();
+        }
     }
     
     /// <summary>
@@ -586,6 +593,15 @@ public class ShogiManager : MonoBehaviour
         RemovePiece(from); // 元の場所を空に
         PlacePiece(to, type, movingPiece); // 新しい場所に設置
         movingPiece.SetPosition(to); // Piece側の位置も更新
+        
+        // 移動データを保存
+        _data = new UsiMoveData
+        {
+            From = from,
+            To = to,
+            IsFastPromote = false,
+            Type = null
+        };
     }
     
     /// <summary>
@@ -600,6 +616,11 @@ public class ShogiManager : MonoBehaviour
         piece.PromotePiece(pieceData);
         // 盤面の状態を更新
         _boardState[pos.x - 1, pos.y - 1] = pieceData.promotedType;
+        
+        if (_data.Type == null && _data.To == pos)
+        {
+            _data.IsFastPromote = true; // 成り選択がされたことを記録
+        }
     }
 
     /// <summary>
@@ -643,6 +664,15 @@ public class ShogiManager : MonoBehaviour
         Debug.Log(pieceType + "を指しました。");
         // 持ち駒のUIを更新
         CapturePieceUIManager.Instance.ApplyVisualUI(pieceType, ActivePlayer);
+        
+        // 移動データを保存
+        _data = new UsiMoveData
+        {
+            From = Vector2Int.zero,
+            To = pos,
+            IsFastPromote = false,
+            Type = pieceType
+        };
     }
 
     /// <summary>
@@ -678,206 +708,89 @@ public class ShogiManager : MonoBehaviour
     {
         return _boardState[pos.x - 1, pos.y - 1];
     }
-    
-    /*void Start()
-    {
-        buttons.SetActive(false);
-        ActivePlayer = true;
-        CanSelect = false; // 初期状態では選択可能
-        _isFastPromote = false;
-        
-        trueButton.onClick.AddListener(() => Choose(true));
-        falseButton.onClick.AddListener(() => Choose(false));
 
-        shogiEngMan.SetStartPosition();
+    private struct UsiMoveData
+    {
+        public Vector2Int From;
+        public Vector2Int To;
+        public bool IsFastPromote; // 成り選択がされたか
+        public PieceType? Type; // 持ち駒の種類
     }
     
-    //----------------------------------
-    //-----------AI専用処理--------------
-    //----------------------------------
-    
-    // エンジンからの移動情報を受信する
-    public async void ReceiveEngineMove(string moveString)
+    /// <summary>
+    /// エンジンに指し手を送信
+    /// </summary>
+    private void SendMoveToEngine()
     {
-        if (moveString[1].ToString() == "*") // 持ち駒の場合の処理
-        {
-            await UniTask.SwitchToMainThread();
-            DropMove(moveString);
-        }
-        else // 通常の移動の場合
-        {
-            var moveData =  ParseMoveString(moveString);
+        string usiMove;
+        Debug.Log("a");
 
-            if (moveData != null)
-            {
-                var data = moveData.Value;
-                await ExecuteEngineMoveAsync(data.startIndex, data.endIndex, data.toX, data.toY);
-            }
-        }
-    }
-    
-    private async UniTask ExecuteEngineMoveAsync(int fromX, int fromY, int toX, int toY)
-    {
-        // メインスレッドに切り替え
-        await UniTask.SwitchToMainThread();
-        ExecuteEngineMove(fromX, fromY, toX, toY);
-    }
-    
-    void ExecuteEngineMove(int fromX, int fromY, int toX, int toY)
-    {
-        // AI手番チェック
-        if (ActivePlayer)
+        if (_data.Type == null) // 通常の移動の場合
         {
-            return;
+            Debug.Log("通常の移動");
+            usiMove = UsiConverter.ToUsiMove(_data.From, _data.To);
+            if (_data.IsFastPromote) usiMove = UsiConverter.AddPromote(usiMove);
         }
-    
-        // 駒を探す
-        LayerMask pieceLayer = LayerMask.GetMask("Piece");
-        Vector2 fromPosition = new Vector2(fromX, fromY);
-        Collider2D fromPieceCollider = Physics2D.OverlapPoint(fromPosition, pieceLayer);
-
-        if (fromPieceCollider != null)
+        else // 持ち駒の場合
         {
-            Piece movingPiece = fromPieceCollider.GetComponent<Piece>();
-            if (movingPiece != null)
-            {
-                string expectedTag = "Gote";
-                string actualTag = fromPieceCollider.gameObject.tag;
-            
-                if (actualTag != expectedTag)
-                {
-                    Debug.LogError($"❌ Wrong piece! AI trying to move {actualTag} piece, but should move {expectedTag}");
-                    return;
-                }
-                
-                Vector2 toPosition = new Vector2(toX, toY);
-                movingPiece.ExecuteAIMove(toPosition, _isFastPromote);
-                
-                // ✅ AIの手を記譜法に変換して履歴に追加
-                string aiMoveNotation = ConvertToShogiNotation(fromPosition, toPosition);
-                
-                ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
-                if (engineManager != null)
-                {
-                    engineManager.AddMoveToHistory(aiMoveNotation);
-                }
-
-                _isFastPromote = false;
-                ActivePlayer = !ActivePlayer;
-            }
-        }
-        else
-        {
-            Debug.LogError($"❌ 駒がない ({fromX},{fromY})");
-        }
-    }
-    
-    //---------駒形式の変換------------
-    // aiの移動形式の変換
-    (int startIndex, int endIndex, int toX, int toY)? ParseMoveString(string moveString)
-    {
-        //　文字列チェック
-        if (moveString.Length < 4)
-        {
-            Debug.LogWarning($"フォーマットが違います: {moveString}");
-            return null;
-        }
-        // 成駒のチェック
-        if (moveString.Length == 5 && moveString[4].ToString() == "+")
-        {
-            _isFastPromote = true;
+            Debug.Log("持ち駒の移動");
+            usiMove = UsiConverter.ToUsiDrop(_data.Type.Value, _data.To);
         }
         
-        // 駒の種類を取得
-        int shogiFromX = int.Parse(moveString[0].ToString());
-        char fromYChar = moveString[1];
-        int shogiToX = int.Parse(moveString[2].ToString());
-        char toYChar = moveString[3];
+        // 指し手を履歴に追加
+        Debug.Log("指し手を履歴に保存");
+        usiEngine.AddMoveToHistory(usiMove);
         
-        // Debug.Log(moveString);
-        
-        // 文字を数字に変換
-        int fromY = fromYChar - 'a' + 1;
-        int toY = toYChar - 'a' + 1;
-        return (shogiFromX, fromY, shogiToX, toY);
+        // エンジンに盤面の状態を送信し、次の指し手を要求
+        Debug.Log("エンジンに指し手を送信し、次の手を要求: " + usiMove);
+        usiEngine.RequestBestMoveWithHistory();
     }
 
-    void DropMove(string moveString)
+    /// <summary>
+    /// USIEngineからの指し手を受け取る
+    /// </summary>
+    public void ReceiveEngineMove(string moveString)
     {
-        // 持ち駒の処理
-        if (moveString.Length < 4)
-        {
-            Debug.LogWarning($"フォーマットが違います: {moveString}");
-            return;
-        }
+        Debug.Log("エンジンから指し手を受け取りました: " + moveString);
+        Vector2Int toPos;
         
-        char pieceChar = moveString[0]; // 駒の種類を取得
-        int toX = int.Parse(moveString[2].ToString());
-        char toYChar = moveString[3];
-        int toY = toYChar - 'a' + 1;
-
-        Piece.PieceId pieceType = pieceChar switch
+        if (moveString[1].ToString() != "*") // 通常の移動の場合
         {
-            'P' => Piece.PieceId.Hu,    // 歩兵
-            'N' => Piece.PieceId.Keima, // 桂馬
-            'S' => Piece.PieceId.Gin,   // 銀将
-            'G' => Piece.PieceId.Kin,   // 金将
-            'K' => Piece.PieceId.Gyoku, // 玉将
-            'L' => Piece.PieceId.Kyosha, // 香車
-            'R' => Piece.PieceId.Hisha,  // 飛車
-            'B' => Piece.PieceId.Kaku,   // 角
-            _ => throw new ArgumentException("不明な持ち駒: " + pieceChar)
-        };
-          
-        heldPieceManager.RemoveHeldPiece(pieceType);
-        if (HeldPieceManager.FoundPiece != null && HeldPieceManager.IsHeldPieceSelected)
-        {
-            HeldPieceManager.FoundPiece.transform.position = new Vector2(toX, toY);
-            HeldPieceManager.FoundPiece.SetActive(true);
-
-            Piece pieceScript = HeldPieceManager.FoundPiece.GetComponent<Piece>();
-            pieceScript.ApplyStatePiece(pieceType);
-
-            // 持ち駒リストから削除 & 個数を減らす
-            bool capturerIsSente = HeldPieceManager.FoundPiece.CompareTag("Sente");
-            int pieceTypeIndex = (int)pieceScript.pieceType;
-            if (capturerIsSente)
+            Debug.Log("通常の移動");
+            var moveData = UsiConverter.ParseMoveString(moveString); // 指し手の解析
+            if (moveData == null)
             {
-                heldPieceManager.senteInactivePieces.Remove(HeldPieceManager.FoundPiece);
-                heldPieceManager.senteHeldPieceType[pieceTypeIndex]--;
+                Debug.LogError("指し手が解析できません: " + moveString);
+                return;
             }
-            else
-            {
-                heldPieceManager.goteInactivePieces.Remove(HeldPieceManager.FoundPiece);
-                heldPieceManager.goteHeldPieceType[pieceTypeIndex]--;
-            }
-            heldPieceManager.OnHeldPieceChanged?.Invoke();
 
-            HeldPieceManager.IsHeldPieceSelected = false;
-            HeldPieceManager.FoundPiece = null;
-            ActivePlayer = !ActivePlayer;
+            var data = moveData.Value;
 
-            ShogiEngineManager engineManager = FindObjectOfType<ShogiEngineManager>();
-            if (engineManager != null)
+            // 駒の移動
+            Vector2Int fromPos = new Vector2Int(data.startIndex, data.endIndex);
+            toPos = new Vector2Int(data.toX, data.toY);
+            MovePiece(fromPos, toPos);
+
+            // もし成り選択がされたなら
+            if (data.isFastPromote)
             {
-                engineManager.AddMoveToHistory(moveString);
+                PieceData pieceData =
+                    pieceDatabase.GetPieceData(GetPieceAt(toPos).GetComponent<Piece>().BasePieceType);
+                PromotePiece(toPos, pieceData);
             }
         }
+        else // 持ち駒の場合の処理
+        {
+            Debug.Log("持ち駒の移動");
+            var moveData = UsiConverter.ParseDropString(moveString);
+            toPos = new Vector2Int(moveData.toX, moveData.toY);
+            SetCapturedPiece(moveData.type, toPos);
+        }
+
+        // 指し手を記録
+        usiEngine.AddMoveToHistory(moveString);
+        EndTurnPhase(toPos);
+        
+        _data = default;
     }
-    
-    // aiの移動形式の変換
-    public string ConvertToShogiNotation(Vector2 fromPos, Vector2 toPos)
-    {
-        char fromYChar = (char)('a' + (int)fromPos.y - 1);
-        char toYChar = (char)('a' + (int)toPos.y - 1);
-    
-        string notation = $"{fromPos.x}{fromYChar}{toPos.x}{toYChar}";
-
-        if (_isFastPromote)
-        {
-            notation += "+";
-        }
-    
-        return notation;
-    }*/
 }

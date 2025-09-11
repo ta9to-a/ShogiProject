@@ -12,7 +12,7 @@ public class GameModeManager : MonoBehaviour
         PlayerVsAI,
         詰将棋
     }
-    public GameMode CurrentGameMode { get; private set; } = GameMode.PlayerVsPlayer;
+    public GameMode CurrentGameMode { get; private set; } = GameMode.PlayerVsAI;
     
     private void Awake()
     {
@@ -25,9 +25,15 @@ public class GameModeManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private void Start()
+    {
+        SetMode(CurrentGameMode);
+    }
+
     public void SetMode(GameMode gameMode)
     {
         CurrentGameMode = gameMode;
-        Debug.Log($"Game mode set to: {CurrentGameMode}");
+        Debug.Log("Game Mode set to: " + CurrentGameMode);
+        ShogiManager.Instance.SetGame();
     }
 }

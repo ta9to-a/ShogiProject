@@ -1,40 +1,46 @@
-/*using UnityEngine;
+using UnityEngine;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 using System.Collections.Generic;
 
-public class ShogiEngineManager : MonoBehaviour
+public class UsiEngineConnector : MonoBehaviour
 {
-    private Process _engineProcess;
-    private StreamWriter _engineStreamWriter;
-    private StreamReader _engineStreamReader;
+    public Turn EngineTurn {get; private set;}  // エンジンのターン（先手 or 後手）
     
-    [SerializeField] int aiThinkTimeMs;
-    [SerializeField] int depthLimit;
-    [SerializeField] int nodesLimit;
-    
-    public ShogiManager shogiManager;
+    [SerializeField] int aiThinkTimeMs;     // AIの思考時間（ミリ秒）
+    [SerializeField] int depthLimit;        // 探索深さの制限
+    [SerializeField] int nodesLimit;        // ノード数の制限
 
+    private Process _engineProcess;             // エンジンのプロセス
+    private StreamWriter _engineStreamWriter;   // エンジンへのコマンド送信用
+    private StreamReader _engineStreamReader;   // エンジンからの応答受信用
+    
     private Stopwatch _thinkingStopwatch;
 
-    void Start()
+    /// <summary>
+    /// エンジンの使用を開始する
+    /// </summary>
+    public void StartEngin()
     {
         _thinkingStopwatch = new Stopwatch();
 
         // エンジンのパスを取得
-        string enginePath = Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "YaneuraOu_NNUE_halfKP256-V830Git_APPLEM1");
+        string enginePath =
+            Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "PLEM1raOu_NNUE_halfKP256-V830Git_APPLEM1");
         string engineDirectory = Path.GetDirectoryName(enginePath);
-
+        Debug.Log(engineDirectory);
+        
         if (engineDirectory != null)
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo()
+            ProcessStartInfo startInfo = new ProcessStartInfo
             {
                 FileName = enginePath, // エンジンの実行ファイルパス
                 WorkingDirectory = engineDirectory, // エンジンのディレクトリ
             
                 UseShellExecute = false, // 直接制御するようにする
+                
                 // 送信設定
                 RedirectStandardInput = true,  // 送信許可
                 RedirectStandardOutput = true, // 受け取り許可
@@ -50,19 +56,9 @@ public class ShogiEngineManager : MonoBehaviour
             if (args.Data != null)
             {
                 string engineResponse = args.Data;
-                if (engineResponse == "usiok")
-                {
-                    Debug.Log("Engine > " + engineResponse);
-                }
-                else if (engineResponse == "readyok")
-                {
-                    Debug.Log("Engine > " + engineResponse);
-                    ShogiManager.CanSelect = true;
-                }
-                else if (engineResponse.StartsWith("bestmove"))
-                {
-                    ParseBestMove(engineResponse);
-                }
+                
+                if (engineResponse == "usiok" || engineResponse == "readyok") Debug.Log("Engine > " + engineResponse);
+                else if (engineResponse.StartsWith("bestmove")) ParseBestMove(engineResponse);
             }
         };
         
@@ -73,20 +69,22 @@ public class ShogiEngineManager : MonoBehaviour
                 Debug.LogError("Engine ERROR > " + args.Data);
             }
         };
-
         // やねうら王の使用を開始
         _engineProcess.Start();
         
         _engineProcess.BeginOutputReadLine(); // 通常時
         _engineProcess.BeginErrorReadLine(); // エラー出力を読み取る
 
+        // ストリームの取得
         _engineStreamWriter = _engineProcess.StandardInput;
 
         InitializeEngine();
     }
 
-    //-----エンジンの使用を開始する-----
-    async void InitializeEngine()
+    /// <summary>
+    /// エンジンの初期化
+    /// </summary>
+    private async void InitializeEngine()
     {
         SendCommand("usi");
         await Task.Delay(1000); // エンジンの応答を待つ
@@ -100,9 +98,11 @@ public class ShogiEngineManager : MonoBehaviour
         
         SendCommand("isready");
     }
-
-    //-----エンジンを終了する-----
-    void OnApplicationQuit()
+    
+    /// <summary>
+    /// エンジンの使用を終了する
+    /// </summary>
+    private void OnApplicationQuit()
     {
         if (_engineProcess != null && !_engineProcess.HasExited)
         {
@@ -112,9 +112,24 @@ public class ShogiEngineManager : MonoBehaviour
         }
     }
     
-    //-----エンジンにコマンドを送信する-----
-    public void SendCommand(string command)
+    /// <summary>
+    /// エンジンにコマンドを送信する
+    /// </summary>
+    private void SendCommand(string command)
     {
+        if (_engineProcess == null)
+        {
+            Debug.LogError("エンジンプロセスが初期化されていません。");
+        }
+        else if (_engineProcess.HasExited)
+        {
+            Debug.LogError("エンジンプロセスが終了しています。");
+        }
+        else if (_engineStreamWriter == null)
+        {
+            Debug.LogError("エンジンへのストリームが初期化されていません。");
+        }
+        
         if (_engineProcess != null && !_engineProcess.HasExited && _engineStreamWriter != null)
         {
             _engineStreamWriter.WriteLine(command);
@@ -126,25 +141,29 @@ public class ShogiEngineManager : MonoBehaviour
             }
         }
     }
-    
-    //------------------------------
-    //-----------対局状況-------------
-    //------------------------------
 
+    /// <summary>
+    /// 初期局面を設定
+    /// </summary>
     public void SetStartPosition()
     {
         SendCommand("position startpos");
     }
     
-    public void StartThinking(int thinkTimeMs = -1)
+    /// <summary>
+    /// AIの思考を開始する
+    /// </summary>
+    private void StartThinking(int timeMs = -1)
     {
         _thinkingStopwatch.Restart();
-        int actualThinkTime = thinkTimeMs == -1 ? aiThinkTimeMs : thinkTimeMs;
+        int actualThinkTime = timeMs == -1 ? aiThinkTimeMs : timeMs;
         SendCommand($"go byoyomi {actualThinkTime}");
     }
 
-    // AIの最善手を解析する
-    async void ParseBestMove(string response)
+    /// <summary>
+    /// エンジンからのbestmove応答を解析し、指し手を取得する
+    /// </summary>
+    private async void ParseBestMove(string response)
     {
         _thinkingStopwatch.Stop();
         long elapsedMilliseconds = _thinkingStopwatch.ElapsedMilliseconds;
@@ -153,9 +172,6 @@ public class ShogiEngineManager : MonoBehaviour
         if (parts.Length > 1)
         {
             string bestMove = parts[1];
-            
-            string objectTag = ShogiManager.ActivePlayer? "☗" : "☖";
-            Debug.Log(objectTag + " " + bestMove);
 
             long delayMs = 375 - elapsedMilliseconds;
             if (delayMs > 0)
@@ -163,18 +179,24 @@ public class ShogiEngineManager : MonoBehaviour
                 await Task.Delay((int)delayMs);
             }
             
-            shogiManager.ReceiveEngineMove(bestMove);
+            ShogiManager.Instance.ReceiveEngineMove(bestMove);
         }
     }
 
     //指し手履歴を管理
-    List<string> _moveHistory = new ();
+    private List<string> _moveHistory = new ();
 
+    /// <summary>
+    /// 指し手履歴に手を追加する
+    /// </summary>
     public void AddMoveToHistory(string move)
     {
         _moveHistory.Add(move);
     }
 
+    /// <summary>
+    /// 指し手履歴に最後の手を追加する
+    /// </summary>
     public void RequestBestMoveWithHistory()
     {
         string positionCommand = "position startpos";
@@ -186,4 +208,4 @@ public class ShogiEngineManager : MonoBehaviour
         SendCommand(positionCommand);
         StartThinking();
     }
-}*/
+}
