@@ -1,9 +1,11 @@
+using System;
 using UnityEngine;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using Debug = UnityEngine.Debug;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 
 public class UsiEngineConnector : MonoBehaviour
 {
@@ -18,6 +20,8 @@ public class UsiEngineConnector : MonoBehaviour
     private StreamReader _engineStreamReader;   // エンジンからの応答受信用
     
     private Stopwatch _thinkingStopwatch;
+    
+    private TaskCompletionSource<bool> _usiOkReceived;
 
     /// <summary>
     /// エンジンの使用を開始する
@@ -25,12 +29,12 @@ public class UsiEngineConnector : MonoBehaviour
     public void StartEngin()
     {
         _thinkingStopwatch = new Stopwatch();
+        _usiOkReceived = new TaskCompletionSource<bool>();
 
         // エンジンのパスを取得
         string enginePath =
-            Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "PLEM1raOu_NNUE_halfKP256-V830Git_APPLEM1");
+            Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "YaneuraOu_NNUE_halfKP256-V830Git_APPLEM1");
         string engineDirectory = Path.GetDirectoryName(enginePath);
-        Debug.Log(engineDirectory);
         
         if (engineDirectory != null)
         {
@@ -50,15 +54,30 @@ public class UsiEngineConnector : MonoBehaviour
 
             _engineProcess = new Process { StartInfo = startInfo };
         }
-
+        
         _engineProcess.OutputDataReceived += (sender, args) =>
         {
             if (args.Data != null)
             {
                 string engineResponse = args.Data;
-                
-                if (engineResponse == "usiok" || engineResponse == "readyok") Debug.Log("Engine > " + engineResponse);
-                else if (engineResponse.StartsWith("bestmove")) ParseBestMove(engineResponse);
+
+                if (engineResponse == "usiok")
+                {
+                    Debug.Log("Engine > " + engineResponse);
+                    /*var tcs = _usiOkReceived.Task;
+                    tcs.ContinueWith(t => _usiOkReceived.TrySetResult(true),
+                        TaskContinuationOptions.ExecuteSynchronously);*/
+                    _usiOkReceived.TrySetResult(true);
+                }
+
+                if (engineResponse == "readyok")
+                {
+                    Debug.Log("Engine > " + engineResponse);
+                }
+                else if (engineResponse.StartsWith("bestmove"))
+                {
+                    ParseBestMove(engineResponse);
+                }
             }
         };
         
@@ -86,17 +105,16 @@ public class UsiEngineConnector : MonoBehaviour
     /// </summary>
     private async void InitializeEngine()
     {
-        SendCommand("usi");
-        await Task.Delay(1000); // エンジンの応答を待つ
+        SendCommand("usi"); 
+        await _usiOkReceived.Task; // usiok応答を待つ
         
         SendCommand("setoption name Depth value " + depthLimit);
         SendCommand("setoption name Nodes value " + nodesLimit);
         
-        Debug.Log("読み手: " + (depthLimit > 0 ? depthLimit + "手" : "無制限"));
-        Debug.Log("ノード数制限: " + (nodesLimit > 0 ? nodesLimit.ToString() : "無制限"));
-        Debug.Log("AI思考時間: " + aiThinkTimeMs + "ms");
-        
         SendCommand("isready");
+        /*Debug.Log("読み手: " + (depthLimit > 0 ? depthLimit + "手" : "無制限"));
+        Debug.Log("ノード数制限: " + (nodesLimit > 0 ? nodesLimit.ToString() : "無制限"));
+        Debug.Log("AI思考時間: " + aiThinkTimeMs + "ms");*/
     }
     
     /// <summary>
@@ -123,7 +141,13 @@ public class UsiEngineConnector : MonoBehaviour
         }
         else if (_engineProcess.HasExited)
         {
-            Debug.LogError("エンジンプロセスが終了しています。");
+            Debug.LogError("エンジンプロセスが終了している可能性があるため、コマンドを送信できません。");
+            _engineProcess.Refresh();
+            if (_engineProcess.HasExited || _engineProcess.MainWindowHandle.Equals(IntPtr.Zero))
+            {
+                Debug.LogError("エンジンプロセスが終了しています。");
+            }
+            return;
         }
         else if (_engineStreamWriter == null)
         {
