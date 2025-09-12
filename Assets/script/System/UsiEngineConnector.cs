@@ -9,8 +9,8 @@ using Cysharp.Threading.Tasks;
 
 public class UsiEngineConnector : MonoBehaviour
 {
-    public Turn EngineTurn {get; private set;}  // エンジンのターン（先手 or 後手）
-    
+    [SerializeField] bool isPonder;         // 先読みを行うかどうか
+    [SerializeField] bool useBook;          // 定跡を使用するかどうか
     [SerializeField] int aiThinkTimeMs;     // AIの思考時間（ミリ秒）
     [SerializeField] int depthLimit;        // 探索深さの制限
     [SerializeField] int nodesLimit;        // ノード数の制限
@@ -22,60 +22,64 @@ public class UsiEngineConnector : MonoBehaviour
     private Stopwatch _thinkingStopwatch;
     
     private TaskCompletionSource<bool> _usiOkReceived;
+    private TaskCompletionSource<bool> _readyOkReceived;
 
     /// <summary>
     /// エンジンの使用を開始する
     /// </summary>
-    public void StartEngin()
+    public async UniTask StartEngin()
     {
         _thinkingStopwatch = new Stopwatch();
         _usiOkReceived = new TaskCompletionSource<bool>();
+        _readyOkReceived = new TaskCompletionSource<bool>();
+        
 
         // エンジンのパスを取得
         string enginePath =
             Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "YaneuraOu_NNUE_halfKP256-V830Git_APPLEM1");
         string engineDirectory = Path.GetDirectoryName(enginePath);
         
-        if (engineDirectory != null)
+        if (engineDirectory == null) // エンジンの実行ファイルが存在しない場合
         {
-            ProcessStartInfo startInfo = new ProcessStartInfo
-            {
-                FileName = enginePath, // エンジンの実行ファイルパス
-                WorkingDirectory = engineDirectory, // エンジンのディレクトリ
-            
-                UseShellExecute = false, // 直接制御するようにする
-                
-                // 送信設定
-                RedirectStandardInput = true,  // 送信許可
-                RedirectStandardOutput = true, // 受け取り許可
-                RedirectStandardError = true, // エラー出力
-                CreateNoWindow = true // ウィンドウを表示しない
-            };
-
-            _engineProcess = new Process { StartInfo = startInfo };
+            Debug.LogError("エンジンの実行ファイルが見つかりません: " + enginePath);
+            return;
         }
         
+        // エンジンのプロセスを設定
+        ProcessStartInfo startInfo = new ProcessStartInfo
+        {
+            FileName = enginePath, // エンジンの実行ファイルパス
+            WorkingDirectory = engineDirectory, // エンジンのディレクトリ
+            
+            UseShellExecute = false, // 直接制御するようにする
+                
+            // 送信設定
+            RedirectStandardInput = true,  // 送信許可
+            RedirectStandardOutput = true, // 受け取り許可
+            RedirectStandardError = true, // エラー出力
+            CreateNoWindow = true // ウィンドウを表示しない
+        };
+
+        _engineProcess = new Process { StartInfo = startInfo };
         _engineProcess.OutputDataReceived += (sender, args) =>
         {
             if (args.Data != null)
             {
                 string engineResponse = args.Data;
-
+                
                 if (engineResponse == "usiok")
                 {
                     Debug.Log("Engine > " + engineResponse);
-                    /*var tcs = _usiOkReceived.Task;
-                    tcs.ContinueWith(t => _usiOkReceived.TrySetResult(true),
-                        TaskContinuationOptions.ExecuteSynchronously);*/
-                    _usiOkReceived.TrySetResult(true);
+                    _usiOkReceived.SetResult(true);
                 }
-
                 if (engineResponse == "readyok")
                 {
                     Debug.Log("Engine > " + engineResponse);
+                    _readyOkReceived.SetResult(true);
                 }
-                else if (engineResponse.StartsWith("bestmove"))
+                if (engineResponse.StartsWith("bestmove"))
                 {
+                    Debug.Log("Engine > " + engineResponse);
                     ParseBestMove(engineResponse);
                 }
             }
@@ -98,6 +102,7 @@ public class UsiEngineConnector : MonoBehaviour
         _engineStreamWriter = _engineProcess.StandardInput;
 
         InitializeEngine();
+        await _readyOkReceived.Task;
     }
 
     /// <summary>
@@ -105,16 +110,17 @@ public class UsiEngineConnector : MonoBehaviour
     /// </summary>
     private async void InitializeEngine()
     {
-        SendCommand("usi"); 
-        await _usiOkReceived.Task; // usiok応答を待つ
+        // USIモードに切り替え
+        SendCommand("usi");
+        await _usiOkReceived.Task;
         
-        SendCommand("setoption name Depth value " + depthLimit);
-        SendCommand("setoption name Nodes value " + nodesLimit);
+        // オプション設定
+        SendCommand($"setoption name Ponder value {isPonder}"); // 先読みの設定
+        SendCommand($"setoption name UseBook value {useBook}"); // 定跡の使用設定
+        SendCommand($"setoption name DepthLimit value {depthLimit}"); // 探索深さの制限
+        SendCommand($"setoption name NodesLimit value {nodesLimit}"); // ノード数の制限
         
         SendCommand("isready");
-        /*Debug.Log("読み手: " + (depthLimit > 0 ? depthLimit + "手" : "無制限"));
-        Debug.Log("ノード数制限: " + (nodesLimit > 0 ? nodesLimit.ToString() : "無制限"));
-        Debug.Log("AI思考時間: " + aiThinkTimeMs + "ms");*/
     }
     
     /// <summary>
@@ -135,43 +141,28 @@ public class UsiEngineConnector : MonoBehaviour
     /// </summary>
     private void SendCommand(string command)
     {
-        if (_engineProcess == null)
-        {
-            Debug.LogError("エンジンプロセスが初期化されていません。");
-        }
-        else if (_engineProcess.HasExited)
-        {
-            Debug.LogError("エンジンプロセスが終了している可能性があるため、コマンドを送信できません。");
-            _engineProcess.Refresh();
-            if (_engineProcess.HasExited || _engineProcess.MainWindowHandle.Equals(IntPtr.Zero))
-            {
-                Debug.LogError("エンジンプロセスが終了しています。");
-            }
-            return;
-        }
-        else if (_engineStreamWriter == null)
-        {
-            Debug.LogError("エンジンへのストリームが初期化されていません。");
-        }
-        
         if (_engineProcess != null && !_engineProcess.HasExited && _engineStreamWriter != null)
         {
             _engineStreamWriter.WriteLine(command);
             _engineStreamWriter.Flush();
-
+            
             if (command == "usi" || command == "isready")
+            {
+                Debug.Log("Client > " + command);
+            }
+            if (command.StartsWith("position") || command.StartsWith("go"))
             {
                 Debug.Log("Client > " + command);
             }
         }
     }
-
+    
     /// <summary>
     /// 初期局面を設定
     /// </summary>
     public void SetStartPosition()
     {
-        SendCommand("position startpos");
+        SendCommand("usinewgame");
     }
     
     /// <summary>

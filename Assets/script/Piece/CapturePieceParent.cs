@@ -49,7 +49,7 @@ public class CapturePieceParent : MonoBehaviour
     /// </summary>
     public void SelectCapturePiece()
     {
-        if (ShogiManager.Instance.ActivePlayer != capturePieceTurn) return;
+        if (ShogiManager.Instance.ActivePlayer != capturePieceTurn || !ShogiManager.Instance.CanPieceSelect) return;
         
         // 先手と後手の持ち駒の数を取得
         int pieceIndex = (int)capturePieceType;
@@ -58,11 +58,7 @@ public class CapturePieceParent : MonoBehaviour
             ? ShogiManager.Instance.SenteCapturedPieceType[pieceIndex]
             : ShogiManager.Instance.GoteCapturedPieceType[pieceIndex];
         
-        if (currentCount <= 0)
-        {
-            Debug.Log("持ち駒がありません: " + capturePieceType);
-            return;
-        }
+        if (currentCount == 0) return;
         
         // 駒の選択処理
         if (ShogiManager.Instance.ActivePlayer == capturePieceTurn)
@@ -70,13 +66,11 @@ public class CapturePieceParent : MonoBehaviour
             if (ShogiManager.Instance.curSelPiece == null)
             {
                 ShogiManager.Instance.curSelPiece = this.gameObject;
-                Debug.Log(ShogiManager.Instance.curSelPiece.name + "が選択されました");
                 DropPiece();
             }
             else
             {
                 ShogiManager.Instance.curSelPiece = null;
-                Debug.Log("駒の選択が解除されました");
             }
         }
     }

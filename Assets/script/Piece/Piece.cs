@@ -57,7 +57,7 @@ public class Piece : MonoBehaviour
             _moveDistance = -1;
         }
         
-        this.isPromoted = isPromote; // 駒が成り駒かどうか
+        isPromoted = isPromote; // 駒が成り駒かどうか
         _wasInEnemyCamp = false;
 
         // 駒の初期位置を設定
@@ -81,7 +81,6 @@ public class Piece : MonoBehaviour
         isPromoted = true;
         _currentPieceType = piece.promotedType; // 駒の種類を更新
         GetComponent<SpriteRenderer>().sprite = _promSprite;
-        Debug.Log("駒が成りました: " + _currentPieceType);
     }
 
     /// <summary>
@@ -90,20 +89,18 @@ public class Piece : MonoBehaviour
     public void SelectPiece()
     {
         // プレイヤーのターン確認
-        if (ShogiManager.Instance.ActivePlayer != PieceTurn) return;
+        if (ShogiManager.Instance.ActivePlayer != PieceTurn || !ShogiManager.Instance.CanPieceSelect) return;
 
         // 選択中の駒の確認
         if (ShogiManager.Instance.curSelPiece == null) // 現在選択されている駒がない場合
         {
             // 駒が選択されていない場合、現在の駒を選択状態にする
             ShogiManager.Instance.curSelPiece = this.gameObject;
-            //Debug.Log(ShogiManager.instance.curSelPiece.name + "が選択されました");
             MovePiece();
         }
         else // 現在選択されている駒がある場合
         {
             ShogiManager.Instance.curSelPiece = null;
-            Debug.Log("駒の選択が解除されました");
         }
     }
 
@@ -125,9 +122,6 @@ public class Piece : MonoBehaviour
             return;
         }
         
-        // クリックされた位置に駒があるかチェック
-        if (ShogiManager.Instance.GetPieceAt(clickedPoint) != null) ShogiManager.Instance.AddCapturedPiece(clickedPoint);
-
         // 駒の移動処理
         ShogiManager.Instance.MovePiece(currentPos, clickedPoint);
 

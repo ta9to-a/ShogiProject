@@ -32,7 +32,7 @@ public class CapturePieceChild : MonoBehaviour
     /// </summary>
     public void SelectCapturePiece()
     {
-        if (ShogiManager.Instance.ActivePlayer != capturePieceTurn) return;
+        if (ShogiManager.Instance.ActivePlayer != capturePieceTurn || !ShogiManager.Instance.CanPieceSelect) return;
         
         // 駒の選択処理
         if (ShogiManager.Instance.ActivePlayer == capturePieceTurn)
@@ -40,7 +40,6 @@ public class CapturePieceChild : MonoBehaviour
             if (ShogiManager.Instance.curSelPiece == null)
             {
                 ShogiManager.Instance.curSelPiece = this.gameObject;
-                Debug.Log(ShogiManager.Instance.curSelPiece.name + "が選択されました");
                 
                 var key = (capturePieceType, capturePieceTurn);
                 GameObject typeParent = CapturePieceUIManager.Instance.CloneGroups[key][0];
@@ -55,7 +54,6 @@ public class CapturePieceChild : MonoBehaviour
             else
             {
                 ShogiManager.Instance.curSelPiece = null;
-                Debug.Log("駒の選択が解除されました");
             }
         }
     }

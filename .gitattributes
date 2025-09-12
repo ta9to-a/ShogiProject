@@ -1,0 +1,2 @@
+{LARGE_FILE} filter=lfs diff=lfs merge=lfs -text
+Assets/StreamingAssets/Shogi_Engine/book/standard_book.db filter=lfs diff=lfs merge=lfs -text

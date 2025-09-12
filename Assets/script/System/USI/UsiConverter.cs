@@ -10,30 +10,30 @@ public static class UsiConverter
     /// 送られた指し手の文字列を分解
     /// </summary>
     public static 
-        (int startIndex, int endIndex, int toX, int toY, bool isFastPromote)? ParseMoveString(string moveString)
+        (int fromX, int fromY, int toX, int toY, bool isPromote) ParseMoveString(string moveString)
     {
         //　文字列チェック
         if (moveString.Length < 4)
         {
-            Debug.LogWarning($"フォーマットが違います: {moveString}");
-            return null;
+            Debug.LogWarning($"フォーマットが異なります: {moveString}");
         }
         
-        // 駒の種類を取得
-        int shogiFromX = int.Parse(moveString[0].ToString());
+        // 移動元の座標
+        int fromX = 9 - int.Parse(moveString[0].ToString()) + 1;
         char fromYChar = moveString[1];
-        int shogiToX = int.Parse(moveString[2].ToString());
+        // 移動先の座標
+        int toX = 9 - int.Parse(moveString[2].ToString()) + 1;
         char toYChar = moveString[3];
         
-        // 文字を数字に変換
-        int fromY = fromYChar - 'a' + 1;
-        int toY = toYChar - 'a' + 1;
+        // int型に変換
+        int fromY = 'a' + 9 - fromYChar;
+        int toY = 'a' + 9 - toYChar;
         
         // 成駒のチェック
         bool isFastPromote = (moveString.Length == 5 && moveString[4].ToString() == "+");
         
         // 成駒でない場合
-        return (shogiFromX, fromY, shogiToX, toY, isFastPromote);
+        return (fromX, fromY, toX, toY, isFastPromote);
     }
 
     /// <summary>
@@ -45,15 +45,15 @@ public static class UsiConverter
     public static (PieceType type, int toX, int toY) ParseDropString(string moveString)
     {
         // 持ち駒の処理
-        if (moveString.Length < 4)
+        if (moveString.Length < 4 || moveString[1] != '*')
         {
-            throw new ArgumentException("フォーマットが違います: " + moveString);
+            Debug.LogWarning($"フォーマットが異なります: {moveString}");
         }
         
-        char pieceChar = moveString[0]; // 駒の種類を取得
-        int toX = int.Parse(moveString[2].ToString());
+        char pieceChar = moveString[0]; // 駒の種類
+        int toX = 9 - int.Parse(moveString[2].ToString()) + 1;
         char toYChar = moveString[3];
-        int toY = toYChar - 'a' + 1;
+        int toY = 'a' + 9 - toYChar;
 
         PieceType pieceType = PieceCharToType(pieceChar);
         
@@ -65,10 +65,12 @@ public static class UsiConverter
     /// </summary>
     public static string ToUsiMove(Vector2Int fromPos, Vector2Int toPos)
     {
-        char fromYChar = (char)('a' + fromPos.y - 1);
-        char toYChar = (char)('a' + toPos.y - 1);
-    
-        string notation = $"{fromPos.x}{fromYChar}{toPos.x}{toYChar}";
+        int fromX = 9 - (fromPos.x - 1);
+        char fromYChar = (char)('a' + 9 - fromPos.y);
+        int toX = 9 - (toPos.x - 1);
+        char toYChar = (char)('a' + 9 - toPos.y);
+        
+        string notation = $"{fromX}{fromYChar}{toX}{toYChar}";
         
         return notation;
     }
