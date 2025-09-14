@@ -341,7 +341,7 @@ public class ShogiManager : MonoBehaviour
             return true;
         }
         
-        return false; // 玉が逃げられる場合はtrueを返す
+        return false; // 逃げられない場合
     }
 
     /// <summary>
@@ -358,7 +358,7 @@ public class ShogiManager : MonoBehaviour
                 if (IsKingSafeAfterMove(defender, defenderPiece, attacker.currentPos)) return true;
             }
         }
-        return false;
+        return false; // 駒を取る手段がない場合
     }
     
     /// <summary>
@@ -407,7 +407,7 @@ public class ShogiManager : MonoBehaviour
             }
         }
         
-        return false;
+        return false; // 遮断できる手段がない場合
     }
     
     /// <summary>
@@ -616,7 +616,7 @@ public class ShogiManager : MonoBehaviour
         if (piece == null) return; // 駒が存在しない場合は何もしない
 
         // 成り駒の状態を設定
-        piece.PromotePiece(pieceData);
+        piece.PromotePiece();
         // 盤面の状態を更新
         _boardState[pos.x - 1, pos.y - 1] = pieceData.promotedType;
         
@@ -813,7 +813,7 @@ public class ShogiManager : MonoBehaviour
         _data = default;
     }
     
-    private static readonly Dictionary<int, string> KanjiDigits = new Dictionary<int, string>
+    private static readonly Dictionary<int, string> KanjiDigits = new()
     {
         { 1, "一" }, { 2, "二" }, { 3, "三" }, { 4, "四" }, { 5, "五" },
         { 6, "六" }, { 7, "七" }, { 8, "八" }, { 9, "九" }

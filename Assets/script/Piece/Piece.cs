@@ -9,7 +9,6 @@ public class Piece : MonoBehaviour
 {
     public PieceType BasePieceType { get; private set; }    // 駒の基本種類
     public Turn PieceTurn { get; private set; }             // 駒のターン（先手 or 後手）
-    private PieceType _currentPieceType;                    // 駒の種類
     public Vector2Int currentPos;      // 駒の現在位置
     
     private int _moveDistance;          // 駒の移動方向（先手は1、後手は-1）
@@ -76,10 +75,9 @@ public class Piece : MonoBehaviour
     /// <summary>
     /// 駒を成る処理
     /// </summary>
-    public void PromotePiece(PieceData piece)
+    public void PromotePiece()
     {
         isPromoted = true;
-        _currentPieceType = piece.promotedType; // 駒の種類を更新
         GetComponent<SpriteRenderer>().sprite = _promSprite;
     }
 
