@@ -33,7 +33,7 @@ public class GameModeManager : MonoBehaviour
     public void SetMode(GameMode gameMode)
     {
         CurrentGameMode = gameMode;
-        Debug.Log("Game Mode set to: " + CurrentGameMode);
+        Debug.Log("Game Mode : " + CurrentGameMode);
         ShogiManager.Instance.SetGame();
     }
 }

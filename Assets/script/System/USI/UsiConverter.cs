@@ -39,9 +39,6 @@ public static class UsiConverter
     /// <summary>
     /// 送られた持ち駒の指し手の文字列を分解
     /// </summary>
-    /// <param name="moveString"></param>
-    /// <returns></returns>
-    /// <exception cref="ArgumentException"></exception>
     public static (PieceType type, int toX, int toY) ParseDropString(string moveString)
     {
         // 持ち駒の処理
@@ -78,8 +75,6 @@ public static class UsiConverter
     /// <summary>
     /// 成りの記号を指し手に追加
     /// </summary>
-    /// <param name="moveNotation"></param>
-    /// <returns></returns>
     public static string AddPromote(string moveNotation)
     {
         return moveNotation + "+";
@@ -90,9 +85,10 @@ public static class UsiConverter
     /// </summary>
     public static string ToUsiDrop(PieceType pieceType, Vector2Int toPos)
     {
-        char toYChar = (char)('a' + toPos.y - 1);
+        int toX = 9 - (toPos.x - 1);
+        char toYChar = (char)('a' + 9 - toPos.y);
         string pieceChar = PieceTypeToChar(pieceType);
-        string notation = $"{pieceChar}*{toPos.x}{toYChar}";
+        string notation = $"{pieceChar}*{toX}{toYChar}";
         return notation;
     }
 

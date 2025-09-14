@@ -19,21 +19,16 @@ public class UsiEngineConnector : MonoBehaviour
     private StreamWriter _engineStreamWriter;   // エンジンへのコマンド送信用
     private StreamReader _engineStreamReader;   // エンジンからの応答受信用
     
-    private Stopwatch _thinkingStopwatch;
+    private Stopwatch _thinkingStopwatch = new(); // 思考時間計測用ストップウォッチ
     
-    private TaskCompletionSource<bool> _usiOkReceived;
-    private TaskCompletionSource<bool> _readyOkReceived;
+    private TaskCompletionSource<bool> _usiOkReceived = new();       // usiok応答待ち
+    private TaskCompletionSource<bool> _readyOkReceived = new();     // readyok応答待ち
 
     /// <summary>
     /// エンジンの使用を開始する
     /// </summary>
     public async UniTask StartEngin()
     {
-        _thinkingStopwatch = new Stopwatch();
-        _usiOkReceived = new TaskCompletionSource<bool>();
-        _readyOkReceived = new TaskCompletionSource<bool>();
-        
-
         // エンジンのパスを取得
         string enginePath =
             Path.Combine(Application.streamingAssetsPath, "Shogi_Engine", "YaneuraOu_NNUE_halfKP256-V830Git_APPLEM1");
@@ -79,7 +74,6 @@ public class UsiEngineConnector : MonoBehaviour
                 }
                 if (engineResponse.StartsWith("bestmove"))
                 {
-                    Debug.Log("Engine > " + engineResponse);
                     ParseBestMove(engineResponse);
                 }
             }
@@ -101,25 +95,26 @@ public class UsiEngineConnector : MonoBehaviour
         // ストリームの取得
         _engineStreamWriter = _engineProcess.StandardInput;
 
-        InitializeEngine();
+        SetupUsiEngine();
         await _readyOkReceived.Task;
     }
 
     /// <summary>
     /// エンジンの初期化
     /// </summary>
-    private async void InitializeEngine()
+    private async void SetupUsiEngine()
     {
-        // USIモードに切り替え
+        // usiコマンド送信
         SendCommand("usi");
         await _usiOkReceived.Task;
         
         // オプション設定
-        SendCommand($"setoption name Ponder value {isPonder}"); // 先読みの設定
-        SendCommand($"setoption name UseBook value {useBook}"); // 定跡の使用設定
+        SendCommand($"setoption name USI_Ponder value {isPonder}"); // 先読みの設定
+        SendCommand($"setoption name USI_OwnBook value {useBook}"); // 定跡の使用設定
         SendCommand($"setoption name DepthLimit value {depthLimit}"); // 探索深さの制限
         SendCommand($"setoption name NodesLimit value {nodesLimit}"); // ノード数の制限
         
+        // readyコマンド送信
         SendCommand("isready");
     }
     
@@ -147,10 +142,6 @@ public class UsiEngineConnector : MonoBehaviour
             _engineStreamWriter.Flush();
             
             if (command == "usi" || command == "isready")
-            {
-                Debug.Log("Client > " + command);
-            }
-            if (command.StartsWith("position") || command.StartsWith("go"))
             {
                 Debug.Log("Client > " + command);
             }
@@ -219,7 +210,7 @@ public class UsiEngineConnector : MonoBehaviour
         {
             positionCommand += " moves " + string.Join(" ", _moveHistory);
         }
-    
+        
         SendCommand(positionCommand);
         StartThinking();
     }

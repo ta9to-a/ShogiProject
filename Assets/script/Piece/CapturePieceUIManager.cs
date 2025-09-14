@@ -105,7 +105,6 @@ public class CapturePieceUIManager : MonoBehaviour
             if (capturePieceChild != null)
             {
                 capturePieceChild.ApplyStateCapturePiece(pieceType, cp.umPromSprite);
-                //Debug.Log(capturedPieceClone.name + "が追加されました。");
             }
         }
         else
@@ -130,7 +129,6 @@ public class CapturePieceUIManager : MonoBehaviour
             GameObject lastClone = clones.Last();
             if (lastClone != null)
             {
-                Debug.Log(lastClone.name + "を削除します");
                 clones.Remove(lastClone);
                 Destroy(lastClone);
             }

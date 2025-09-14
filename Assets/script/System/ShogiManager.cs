@@ -33,11 +33,6 @@ public class ShogiManager : MonoBehaviour
     
     private UsiMoveData _data;
     
-    /*
-    public static bool CanSelect; // 選択状況を管理するフラグ
-
-    [SerializeField] ShogiEngineManager shogiEngMan; // エンジン管理*/
-    
     [Header("持ち駒の管理")]
     [SerializeField] private BoardInitializer boardInit;    // 持ち駒
     [SerializeField] public MoveHighlight moveHighlight;    // 駒の移動可能範囲ハイライト
@@ -127,8 +122,6 @@ public class ShogiManager : MonoBehaviour
         CapturePieceObjects[Turn.後手] = new List<CapturePieceParent>();
         
         boardInit.CreateCapturePieces();
-        
-        Debug.Log("盤面の初期化が完了しました。");
     }
     
     /// <summary>
@@ -152,6 +145,8 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public void EndTurnPhase(Vector2Int toPos)
     {
+        DebugLastTurn(toPos);
+        
         // 盤面の記録と手数を更新
         AddKifuEntry();
         RecMoveCount++;
@@ -165,7 +160,7 @@ public class ShogiManager : MonoBehaviour
         // 詰み状態ではないかのチェック
         if (IsCheckmate(ActivePlayer))
         {
-            Debug.Log("ゲーム終了");
+            Debug.Log("詰み");
             moveHighlight.RemoveCanMovePosHighlight();
             return;
         }
@@ -248,9 +243,8 @@ public class ShogiManager : MonoBehaviour
         if (attackers.Count > 1)
         {
             // 玉が逃げられるかチェック
-            if (CanKingEscape(defenderTurn)) return false; // 玉が逃げられる場合
+            if (CanKingEscape(defenderTurn)) return false;
             
-            Debug.Log("詰みです。");
             return true;
         }
         
@@ -264,7 +258,6 @@ public class ShogiManager : MonoBehaviour
         // 直線移動する駒の王手を遮断できるかチェック
         if (CanAvoidCheck(defenderTurn, attacker)) return false;
         
-        Debug.Log("詰みです。");
         return true;
     }
 
@@ -392,7 +385,6 @@ public class ShogiManager : MonoBehaviour
                     // 遮断できる駒を置いたとき別の駒が王手していないかチェック
                     if (IsKingSafeAfterMove(defender, mover, pos))
                     {
-                        Debug.Log("遮断可能: " + mover.name + " を " + pos + " に移動");
                         return true;
                     }
                 }
@@ -410,7 +402,6 @@ public class ShogiManager : MonoBehaviour
                 
                 if (IsKingSafeAfterDrop(defender, capturePieceParent.capturePieceType, pos))
                 {
-                    Debug.Log("遮断可能: " + capturePieceParent.capturePieceType + " を " + pos + " に配置");
                     return true;
                 }
             }
@@ -743,7 +734,6 @@ public class ShogiManager : MonoBehaviour
         {
             usiMove = UsiConverter.ToUsiDrop(_data.Type.Value, _data.To);
         }
-        
         usiEngine.AddMoveToHistory(usiMove);
         
         // エンジンに盤面の状態を送信し、次の指し手を要求
@@ -806,12 +796,12 @@ public class ShogiManager : MonoBehaviour
         var parsed = ParseUsiMove(moveString);
         Vector2Int toPos = parsed.To;
 
-        if (parsed.Kind == UsiMoveKind.Move)
+        if (parsed.Kind == UsiMoveKind.Move)    // 通常の移動の場合
         {
             MovePiece(parsed.From, parsed.To);
             if (parsed.IsPromote) PromotePiece(parsed.To, pieceDatabase.GetPieceData(GetPieceAt(parsed.To).BasePieceType));
         }
-        else if (parsed.Kind == UsiMoveKind.Drop)
+        else if (parsed.Kind == UsiMoveKind.Drop && parsed.DropPieceType.HasValue)  // 持ち駒の場合
         {
             SetCapturedPiece(parsed.DropPieceType.Value, parsed.To);
         }
@@ -821,5 +811,25 @@ public class ShogiManager : MonoBehaviour
         EndTurnPhase(toPos);
         
         _data = default;
+    }
+    
+    private static readonly Dictionary<int, string> KanjiDigits = new Dictionary<int, string>
+    {
+        { 1, "一" }, { 2, "二" }, { 3, "三" }, { 4, "四" }, { 5, "五" },
+        { 6, "六" }, { 7, "七" }, { 8, "八" }, { 9, "九" }
+    };
+    
+    /// <summary>
+    /// 指し手をデバッグログに表示
+    /// </summary>
+    private void DebugLastTurn(Vector2Int toPos)
+    {
+        string activeTurn = (ActivePlayer == Turn.先手) ? "☗" : "☖";
+        float rank = 9 - toPos.x + 1;
+        string kanjiFile = KanjiDigits[toPos.y];
+        PieceType pieceType = GetPieceTypeAt(toPos);
+        string type = pieceType.ToString().Substring(0, 1);
+        
+        Debug.Log($"{activeTurn}{rank}{kanjiFile}{type.Substring(0)}");
     }
 }
