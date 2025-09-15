@@ -74,6 +74,7 @@ public class UsiEngineConnector : MonoBehaviour
                 }
                 if (engineResponse.StartsWith("bestmove"))
                 {
+                    Debug.Log("Engine > " + engineResponse);
                     ParseBestMove(engineResponse);
                 }
             }
@@ -118,10 +119,15 @@ public class UsiEngineConnector : MonoBehaviour
         SendCommand("isready");
     }
     
+    private void OnApplicationQuit()
+    {
+        StopEngine();
+    }
+    
     /// <summary>
     /// エンジンの使用を終了する
     /// </summary>
-    private void OnApplicationQuit()
+    public void StopEngine()
     {
         if (_engineProcess != null && !_engineProcess.HasExited)
         {

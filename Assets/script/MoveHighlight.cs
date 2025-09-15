@@ -14,6 +14,9 @@ public class MoveHighlight : MonoBehaviour
     [SerializeField] public GameObject lastMoveHighlightPrefab; // 最後の移動のハイライトのプレハブ
     private bool _isChanging;   // 点滅中かどうか
     
+    [SerializeField] private float minAlpha = 0.75f;
+    [SerializeField] private float maxAlpha = 0.9f;
+    
     private System.Threading.CancellationTokenSource _cts;
 
     private void Awake()
@@ -111,7 +114,7 @@ public class MoveHighlight : MonoBehaviour
         if (lastMoveHighlightPrefab == null) return;
         
         SpriteRenderer spriteRenderer = lastMoveHighlightPrefab.GetComponent<SpriteRenderer>();
-        spriteRenderer.color = new Color(1f, 1f, 1f, 0f);
+        Color baseColor = spriteRenderer.color;
         
         while (!ct.IsCancellationRequested)
         {
@@ -120,7 +123,7 @@ public class MoveHighlight : MonoBehaviour
                 if (lastMoveHighlightPrefab.activeSelf)
                 {
                     lastMoveHighlightPrefab.SetActive(false);
-                    spriteRenderer.color = new Color(1f, 1f, 1f, 0.5f);
+                    spriteRenderer.color = new Color(baseColor.r, baseColor.g, baseColor.b, 0.5f);
                 }
                 // 次フレームまで待機
                 await UniTask.Yield(cancellationToken: ct);
@@ -130,15 +133,15 @@ public class MoveHighlight : MonoBehaviour
             // 点滅開始
             lastMoveHighlightPrefab.SetActive(true);
             
-            for (float alpha = 0.5f; _isChanging && alpha <= 1f; alpha += 0.025f)
+            for (float alpha = minAlpha; _isChanging && alpha <= maxAlpha; alpha += 0.005f)
             {
-                spriteRenderer.color = new Color(1f, 1f, 1f, alpha);
-                await UniTask.Delay(30, cancellationToken: ct);
+                spriteRenderer.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
+                await UniTask.Delay(25, cancellationToken: ct);
             }
-            for (float alpha = 1f; _isChanging && alpha >= 0.5f; alpha -= 0.025f)
+            for (float alpha = maxAlpha; _isChanging && alpha >= minAlpha; alpha -= 0.005f)
             {
-                spriteRenderer.color = new Color(1f, 1f, 1f, alpha);
-                await UniTask.Delay(30, cancellationToken: ct);
+                spriteRenderer.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
+                await UniTask.Delay(25, cancellationToken: ct);
             }
         }
     }

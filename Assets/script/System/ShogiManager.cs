@@ -19,12 +19,12 @@ public class ShogiManager : MonoBehaviour
     public bool CanPieceSelect { get; private set; }
     
     // 持ち駒の状態を管理
-    public int[] SenteCapturedPieceType { get; private set; } = new int[7];   // 先手の持ち駒の種類ごとの数
-    public int[] GoteCapturedPieceType { get; private set; } = new int[7];    // 後手の持ち駒の種類ごとの数
+    public int[] SenteCapturedPieceType { get; } = new int[7];   // 先手の持ち駒の種類ごとの数
+    public int[] GoteCapturedPieceType { get; } = new int[7];    // 後手の持ち駒の種類ごとの数
 
     // 二歩チェック用の歩の列情報
-    public bool[] SenteFuPosition { get; private set; } = new bool[9]; // 先手の歩の列状態
-    public bool[] GoteFuPosition { get; private set; } = new bool[9];  // 後手の歩の列状態
+    public bool[] SenteFuPosition { get;　} = new bool[9]; // 先手の歩の列状態
+    public bool[] GoteFuPosition { get; } = new bool[9];  // 後手の歩の列状態
     
     public int RecMoveCount { get; private set; } // 手数のカウント
 
@@ -80,11 +80,12 @@ public class ShogiManager : MonoBehaviour
         
         // 玉の登録
         KingRegister();
-        // 歩の列情報を設定
+        // 歩の列情報を更新
         CheckTwoFu();
         // 全ての駒の移動可能範囲を更新
         UpdateMovePosFresh();
         
+        // 持ち駒UIの初期化
         CapturePieceUIManager.Instance.Initialize();
         CanPieceSelect = true;
     }
@@ -162,6 +163,9 @@ public class ShogiManager : MonoBehaviour
         {
             Debug.Log("詰み");
             moveHighlight.RemoveCanMovePosHighlight();
+            CanPieceSelect = false;
+            
+            if (GameModeManager.Instance.CurrentGameMode == GameModeManager.GameMode.PlayerVsAI) usiEngine.StopEngine();
             return;
         }
 
@@ -230,16 +234,17 @@ public class ShogiManager : MonoBehaviour
     /// <summary>
     /// 詰みの状態をチェック
     /// </summary>
+    /// <returns>詰みならtrue</returns>
     private bool IsCheckmate(Turn defenderTurn)
     {
         // 全ての駒の移動可能範囲を更新
         UpdateMovePosFresh();
         
-        // 王手されているかチェック
+        // 王手駒の取得
         List<Piece> attackers = CollectAttackers(defenderTurn);
         if (attackers.Count == 0) return false; // 王手されていない場合
         
-        // 二重王手の場合
+        // 多重王手の場合
         if (attackers.Count > 1)
         {
             // 玉が逃げられるかチェック
@@ -249,13 +254,13 @@ public class ShogiManager : MonoBehaviour
         }
         
         Piece attacker = attackers[0];
-        // 玉が逃げられるかチェック
-        if (CanKingEscape(defenderTurn)) return false; // 玉が逃げられる場合
+        // 玉が逃げられるか
+        if (CanKingEscape(defenderTurn)) return false;
         
-        // 王手駒を取る手段があるかチェック
+        // 王手駒を取る手段があるか
         if (CanCaptureAttacker(defenderTurn, attacker)) return false;
         
-        // 直線移動する駒の王手を遮断できるかチェック
+        // 直線移動する駒の王手を遮断できるか
         if (CanAvoidCheck(defenderTurn, attacker)) return false;
         
         return true;
@@ -813,6 +818,9 @@ public class ShogiManager : MonoBehaviour
         _data = default;
     }
     
+    /// <summary>
+    /// 段を表す漢数字
+    /// </summary>
     private static readonly Dictionary<int, string> KanjiDigits = new()
     {
         { 1, "一" }, { 2, "二" }, { 3, "三" }, { 4, "四" }, { 5, "五" },
@@ -826,7 +834,7 @@ public class ShogiManager : MonoBehaviour
     {
         string activeTurn = (ActivePlayer == Turn.先手) ? "☗" : "☖";
         float rank = 9 - toPos.x + 1;
-        string kanjiFile = KanjiDigits[toPos.y];
+        string kanjiFile = KanjiDigits[9 - toPos.y + 1];
         PieceType pieceType = GetPieceTypeAt(toPos);
         string type = pieceType.ToString().Substring(0, 1);
         
