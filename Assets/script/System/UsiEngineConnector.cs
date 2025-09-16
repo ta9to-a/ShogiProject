@@ -46,7 +46,7 @@ public class UsiEngineConnector : MonoBehaviour
             FileName = enginePath, // エンジンの実行ファイルパス
             WorkingDirectory = engineDirectory, // エンジンのディレクトリ
             
-            UseShellExecute = false, // 直接制御するようにする
+            UseShellExecute = false, // シェルを使用しない
                 
             // 送信設定
             RedirectStandardInput = true,  // 送信許可

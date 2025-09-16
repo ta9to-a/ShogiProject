@@ -132,16 +132,22 @@ public class MoveHighlight : MonoBehaviour
 
             // 点滅開始
             lastMoveHighlightPrefab.SetActive(true);
-            
+
             for (float alpha = minAlpha; _isChanging && alpha <= maxAlpha; alpha += 0.005f)
             {
                 spriteRenderer.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
-                await UniTask.Delay(25, cancellationToken: ct);
+                await UniTask.WhenAny(
+                    UniTask.Delay(25, cancellationToken: ct),
+                    UniTask.WaitUntil(() => !_isChanging, cancellationToken: ct)
+                );
             }
             for (float alpha = maxAlpha; _isChanging && alpha >= minAlpha; alpha -= 0.005f)
             {
                 spriteRenderer.color = new Color(baseColor.r, baseColor.g, baseColor.b, alpha);
-                await UniTask.Delay(25, cancellationToken: ct);
+                await UniTask.WhenAny(
+                    UniTask.Delay(25, cancellationToken: ct),
+                    UniTask.WaitUntil(() => !_isChanging, cancellationToken: ct)
+                );
             }
         }
     }
