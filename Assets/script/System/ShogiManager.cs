@@ -44,7 +44,6 @@ public class ShogiManager : MonoBehaviour
 
     private void Awake()
     {
-        // シングルトンの初期化
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -69,13 +68,13 @@ public class ShogiManager : MonoBehaviour
                 boardInit.DefaultPosition();
                 break;
             case GameModeManager.GameMode.PlayerVsAI:
+            case GameModeManager.GameMode.詰将棋:
+                GameModeManager.GameMode mode = GameModeManager.Instance.CurrentGameMode;
                 await usiEngine.StartEngin();
                 boardInit.DefaultPosition();
-                usiEngine.SetStartPosition();
+                InitialBoard(mode);
+                
                 break;
-            /*case GameMode.Mode.詰将棋:
-                boardInit.SetTsumeShogiPosition();
-                break;*/
         }
         
         // 玉の登録
@@ -84,9 +83,9 @@ public class ShogiManager : MonoBehaviour
         CheckTwoFu();
         // 全ての駒の移動可能範囲を更新
         UpdateMovePosFresh();
-        
         // 持ち駒UIの初期化
         CapturePieceUIManager.Instance.Initialize();
+        
         CanPieceSelect = true;
     }
     
@@ -140,7 +139,43 @@ public class ShogiManager : MonoBehaviour
             }
         }
     }
-    
+
+    private void InitialBoard(GameModeManager.GameMode gameMode)
+    {
+        string startMassage; // usiの初期局面設定用の文字列
+        switch (gameMode)
+        {
+            case GameModeManager.GameMode.PlayerVsAI:
+                startMassage = "startpos";
+                break;
+            case GameModeManager.GameMode.詰将棋:
+                // 持ち駒の状態を辞書型に変換
+                startMassage = StartMassage();
+                break;
+            default:
+                Debug.LogError("usiの使用を想定されていません");
+                return;
+        }
+
+        if (usiEngine == null) return;
+
+        usiEngine.SetStartPosition(startMassage);
+    }
+
+    private string StartMassage()
+    {
+        return $"sfen {UsiConverter.ConvertBoardToSfen(_boardState)}" +
+            $" b {UsiConverter.ConvertCapturesToSfen(SenteCapturedPieceType, GoteCapturedPieceType)} 1";
+    }
+
+    private void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            Debug.Log(StartMassage());
+        }
+    }
+
     /// <summary>
     /// 局面の移動フェーズを終了し、次の手番に移行
     /// </summary>
@@ -165,7 +200,8 @@ public class ShogiManager : MonoBehaviour
             moveHighlight.RemoveCanMovePosHighlight();
             CanPieceSelect = false;
             
-            if (GameModeManager.Instance.CurrentGameMode == GameModeManager.GameMode.PlayerVsAI) usiEngine.StopEngine();
+            if (GameModeManager.Instance.CurrentGameMode !=
+                GameModeManager.GameMode.PlayerVsPlayer) usiEngine.StopEngine();
             return;
         }
 
@@ -173,7 +209,7 @@ public class ShogiManager : MonoBehaviour
         moveHighlight.SetLastMoveHighlight(toPos);
         
         // AIのターンの場合、エンジンに指し手を要求
-        if (GameModeManager.Instance.CurrentGameMode == GameModeManager.GameMode.PlayerVsAI)
+        if (GameModeManager.Instance.CurrentGameMode != GameModeManager.GameMode.PlayerVsPlayer)
         {
             if (ActivePlayer == Turn.後手)
             {
@@ -336,9 +372,9 @@ public class ShogiManager : MonoBehaviour
     {
         Piece kingPiece = _kingObj[defender];
         
-        // 玉の移動可能範囲をチェック
-        
+        // 元の移動可能範囲を保存
         List<Vector2Int> originalPositions = new List<Vector2Int>(kingPiece.MovablePositions);
+        // 玉の移動可能範囲をチェック
         foreach (Vector2Int to in originalPositions)
         {
             // 移動先が敵の攻撃範囲に含まれていないかチェック
@@ -798,7 +834,7 @@ public class ShogiManager : MonoBehaviour
     /// </summary>
     public void ReceiveEngineMove(string moveString)
     {
-        var parsed = ParseUsiMove(moveString);
+        ParsedUsiMove parsed = ParseUsiMove(moveString);
         Vector2Int toPos = parsed.To;
 
         if (parsed.Kind == UsiMoveKind.Move)    // 通常の移動の場合
@@ -828,6 +864,18 @@ public class ShogiManager : MonoBehaviour
     };
     
     /// <summary>
+    /// 駒の種類を表す漢字
+    /// </summary>
+    private static readonly Dictionary<PieceType, string> PieceTypeToKanji = new()
+    {
+        { PieceType.歩兵, "歩" }, { PieceType.香車, "香" }, { PieceType.桂馬, "桂" },
+        { PieceType.銀将, "銀" }, { PieceType.金将, "金" }, { PieceType.角行, "角" },
+        { PieceType.飛車, "飛" }, { PieceType.玉将, "玉" }, { PieceType.と金, "と" },
+        { PieceType.成香, "成香" }, { PieceType.成桂, "成桂" }, { PieceType.成銀, "成銀" },
+        { PieceType.龍馬, "馬" }, { PieceType.龍王, "龍" }
+    };
+    
+    /// <summary>
     /// 指し手をデバッグログに表示
     /// </summary>
     private void DebugLastTurn(Vector2Int toPos)
@@ -836,8 +884,15 @@ public class ShogiManager : MonoBehaviour
         float rank = 9 - toPos.x + 1;
         string kanjiFile = KanjiDigits[9 - toPos.y + 1];
         PieceType pieceType = GetPieceTypeAt(toPos);
-        string type = pieceType.ToString().Substring(0, 1);
+        string kanjiPiece = PieceTypeToKanji[pieceType];
         
-        Debug.Log($"{activeTurn}{rank}{kanjiFile}{type.Substring(0)}");
+        string debug = (_debugLastMovePos == toPos)
+            ? $"{activeTurn}同{kanjiPiece}"
+            : $"{activeTurn}{rank}{kanjiFile}{kanjiPiece}";
+        
+        Debug.Log(debug);
+        _debugLastMovePos = toPos;
     }
+    
+    private Vector2Int _debugLastMovePos;
 }

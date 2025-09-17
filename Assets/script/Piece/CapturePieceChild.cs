@@ -18,12 +18,12 @@ public class CapturePieceChild : MonoBehaviour
         if (transform.CompareTag("Sente"))
         {
             capturePieceTurn = Turn.先手;
-            transform.rotation = Quaternion.Euler(0, 0, 0);
+            transform.rotation = Quaternion.Euler(0, 0, 180);
         }
         else
         {
             capturePieceTurn = Turn.後手;
-            transform.rotation = Quaternion.Euler(0, 0, 180);
+            transform.rotation = Quaternion.Euler(0, 0, 0);
         }
     }
     

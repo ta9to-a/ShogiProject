@@ -20,8 +20,8 @@ public class BoardInitializer : MonoBehaviour
     [SerializeField] private GameObject moveHighlightParent;
     
     [Header("持ち駒")]
-    [SerializeField] private Vector2 senteBasePosition = new (10.75f, 3.7f); // 先手の持ち駒のベース位置
-    [SerializeField] private Vector2 goteBasePosition = new (-0.75f, 6.2f); // 後手の持ち駒のベース位置
+    [SerializeField] private Vector2 senteBasePosition = new (-0.75f, 6.2f); // 先手の持ち駒のベース位置
+    [SerializeField] private Vector2 goteBasePosition = new (10.75f, 3.7f); // 後手の持ち駒のベース位置
     [Space(5)]
     [Tooltip("持ち駒の横幅")]
     [SerializeField] private float capturePieceWidth = 1.5f; // 持ち駒の横幅
@@ -30,14 +30,14 @@ public class BoardInitializer : MonoBehaviour
 
     public void DefaultPosition()
     {
-        CreateLinePieces(PieceType.歩兵, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 3, 7 , false);
-        CreateLinePieces(PieceType.香車, new[] { 1, 9 }, 1, 9 , false);
-        CreateLinePieces(PieceType.桂馬, new[] { 2, 8 }, 1, 9, false);
-        CreateLinePieces(PieceType.銀将, new[] { 3, 7 }, 1, 9, false);
-        CreateLinePieces(PieceType.金将, new[] { 4, 6 }, 1, 9, false);
-        CreateMirroredPieces(PieceType.角行, new Vector2Int(2, 2), new Vector2Int(8, 8), false);
-        CreateMirroredPieces(PieceType.飛車, new Vector2Int(8, 2), new Vector2Int(2, 8), false);
-        CreateLinePieces(PieceType.玉将, new[] { 5 }, 1, 9, false);
+        CreateLinePieces(PieceType.歩兵, new[] { 1, 2, 3, 4, 5, 6, 7, 8, 9 }, 7, 3 , false);
+        CreateLinePieces(PieceType.香車, new[] { 1, 9 }, 9, 1 , false);
+        CreateLinePieces(PieceType.桂馬, new[] { 2, 8 }, 9, 1, false);
+        CreateLinePieces(PieceType.銀将, new[] { 3, 7 }, 9, 1, false);
+        CreateLinePieces(PieceType.金将, new[] { 4, 6 }, 9, 1, false);
+        CreateMirroredPieces(PieceType.角行, new Vector2Int(8, 8), new Vector2Int(2, 2), false);
+        CreateMirroredPieces(PieceType.飛車, new Vector2Int(2, 8), new Vector2Int(8, 2), false);
+        CreateLinePieces(PieceType.玉将, new[] { 5 }, 9, 1, false);
     }
 
     public void CreateCapturePieces()
@@ -141,8 +141,8 @@ public class BoardInitializer : MonoBehaviour
                 
                 PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(type.Value);
                 Vector2 pos = new Vector2(
-                    basePos.x + col * capturePieceWidth * (turn == Turn.先手 ? 1f : -1f),
-                    basePos.y + row * capturePieceHeight * (turn == Turn.先手 ? -1f : 1f)
+                    basePos.x + col * capturePieceWidth * (turn == Turn.先手 ? -1f : 1f),
+                    basePos.y + row * capturePieceHeight * (turn == Turn.先手 ? 1f : -1f)
                 );
 
                 CreateCapturePieceObject(turn, data, pos);

@@ -12,7 +12,7 @@ public class GameModeManager : MonoBehaviour
         PlayerVsAI,
         詰将棋
     }
-    public GameMode CurrentGameMode { get; private set; } = GameMode.PlayerVsAI;
+    public GameMode CurrentGameMode { get; private set; } = GameMode.詰将棋;
     
     private void Awake()
     {

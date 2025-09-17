@@ -46,18 +46,19 @@ public class Piece : MonoBehaviour
         if (transform.CompareTag("Sente"))
         {
             PieceTurn = Turn.先手;
-            transform.rotation = Quaternion.Euler(0, 0, 0);
-            _moveDistance = 1;
+            transform.rotation = Quaternion.Euler(0, 0, 180);
+            _moveDistance = -1;
+            
         }
         else
         {
             PieceTurn = Turn.後手;
-            transform.rotation = Quaternion.Euler(0, 0, 180);
-            _moveDistance = -1;
+            transform.rotation = Quaternion.Euler(0, 0, 0);
+            _moveDistance = 1;
         }
         
         isPromoted = isPromote; // 駒が成り駒かどうか
-        _wasInEnemyCamp = false;
+        _wasInEnemyCamp = (PieceTurn == Turn.先手) ? position.y <= 3 : position.y >= 7;
 
         // 駒の初期位置を設定
         SetPosition(position);
@@ -257,16 +258,16 @@ public class Piece : MonoBehaviour
             {
                 case PieceType.歩兵:
                 case PieceType.香車:
-                    if (PieceTurn == Turn.先手 && currentPos.y >= 9 ||
-                        PieceTurn == Turn.後手 && currentPos.y <= 1)
+                    if (PieceTurn == Turn.先手 && currentPos.y <= 1 ||
+                        PieceTurn == Turn.後手 && currentPos.y >= 9)
                     {
                         ShogiManager.Instance.PromotePiece(currentPos, pieceData);
                         return;
                     }
                     break;
                 case PieceType.桂馬:
-                    if (PieceTurn == Turn.先手 && currentPos.y >= 8 ||
-                        PieceTurn == Turn.後手 && currentPos.y <= 2)
+                    if (PieceTurn == Turn.先手 && currentPos.y <= 2 ||
+                        PieceTurn == Turn.後手 && currentPos.y >= 8)
                     {
                         ShogiManager.Instance.PromotePiece(currentPos, pieceData);
                         return;
@@ -276,8 +277,8 @@ public class Piece : MonoBehaviour
             
             // 現在、敵陣にいるかどうか
             bool nowInEnemyCamp =
-                PieceTurn == Turn.先手 && currentPos.y >= 7 ||
-                PieceTurn == Turn.後手 && currentPos.y <= 3;
+                PieceTurn == Turn.先手 && currentPos.y <= 3 ||
+                PieceTurn == Turn.後手 && currentPos.y >= 7;
 
             // 前のターン、敵陣にいたかどうか
             bool leftEnemyCampThisTurn = _wasInEnemyCamp && !nowInEnemyCamp;

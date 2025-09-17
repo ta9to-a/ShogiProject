@@ -85,8 +85,8 @@ public class CapturePieceUIManager : MonoBehaviour
             
             float interval = 0.225f; // 駒同士の間隔
             float offsetX = (turn == Turn.先手)
-                ? clones[0].transform.position.x + (clones.Count * interval)
-                : clones[0].transform.position.x - (clones.Count * interval);
+                ? clones[0].transform.position.x - (clones.Count * interval)
+                : clones[0].transform.position.x + (clones.Count * interval);
             
             capturedPieceClone.transform.position = new Vector3(offsetX, capturedPieceClone.transform.position.y, 0);
             

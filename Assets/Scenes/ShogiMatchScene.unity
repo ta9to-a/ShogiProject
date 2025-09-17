@@ -277,8 +277,8 @@ MonoBehaviour:
   goteParent: {fileID: 819160150}
   capturePieceParent: {fileID: 1881146118}
   moveHighlightParent: {fileID: 128281044}
-  senteBasePosition: {x: 10.75, y: 3.7}
-  goteBasePosition: {x: -0.75, y: 6.2}
+  senteBasePosition: {x: -0.75, y: 6.2}
+  goteBasePosition: {x: 10.75, y: 3.7}
   capturePieceWidth: 1.5
   capturePieceHeight: 1
 --- !u!1 &164906727
@@ -580,13 +580,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 1, w: 0}
   m_LocalPosition: {x: 5, y: 5, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 180}
 --- !u!114 &519420033
 MonoBehaviour:
   m_ObjectHideFlags: 0

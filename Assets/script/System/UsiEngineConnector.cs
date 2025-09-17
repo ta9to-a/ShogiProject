@@ -24,6 +24,8 @@ public class UsiEngineConnector : MonoBehaviour
     private TaskCompletionSource<bool> _usiOkReceived = new();       // usiok応答待ち
     private TaskCompletionSource<bool> _readyOkReceived = new();     // readyok応答待ち
 
+    private string _initialBoard; // 初期局面の文字列
+
     /// <summary>
     /// エンジンの使用を開始する
     /// </summary>
@@ -157,8 +159,9 @@ public class UsiEngineConnector : MonoBehaviour
     /// <summary>
     /// 初期局面を設定
     /// </summary>
-    public void SetStartPosition()
+    public void SetStartPosition(string startMassage)
     {
+        _initialBoard = startMassage;
         SendCommand("usinewgame");
     }
     
@@ -211,11 +214,8 @@ public class UsiEngineConnector : MonoBehaviour
     /// </summary>
     public void RequestBestMoveWithHistory()
     {
-        string positionCommand = "position startpos";
-        if (_moveHistory.Count > 0)
-        {
-            positionCommand += " moves " + string.Join(" ", _moveHistory);
-        }
+        string positionCommand = $"position {_initialBoard} moves {string.Join(" ", _moveHistory)}";
+        Debug.Log(positionCommand);
         
         SendCommand(positionCommand);
         StartThinking();

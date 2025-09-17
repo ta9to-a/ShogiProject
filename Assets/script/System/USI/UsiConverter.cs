@@ -19,15 +19,15 @@ public static class UsiConverter
         }
         
         // 移動元の座標
-        int fromX = 9 - int.Parse(moveString[0].ToString()) + 1;
+        int fromX = int.Parse(moveString[0].ToString());
         char fromYChar = moveString[1];
         // 移動先の座標
-        int toX = 9 - int.Parse(moveString[2].ToString()) + 1;
+        int toX = int.Parse(moveString[2].ToString());
         char toYChar = moveString[3];
         
         // int型に変換
-        int fromY = 'a' + 9 - fromYChar;
-        int toY = 'a' + 9 - toYChar;
+        int fromY = fromYChar - 'a' + 1;
+        int toY = toYChar - 'a' + 1;
         
         // 成駒のチェック
         bool isFastPromote = (moveString.Length == 5 && moveString[4].ToString() == "+");
@@ -48,12 +48,11 @@ public static class UsiConverter
         }
         
         char pieceChar = moveString[0]; // 駒の種類
-        int toX = 9 - int.Parse(moveString[2].ToString()) + 1;
+        int toX = int.Parse(moveString[2].ToString());
         char toYChar = moveString[3];
-        int toY = 'a' + 9 - toYChar;
+        int toY = toYChar - 'a' + 1;
 
         PieceType pieceType = PieceCharToType(pieceChar);
-        
         return (pieceType, toX, toY);
     }
     
@@ -62,14 +61,12 @@ public static class UsiConverter
     /// </summary>
     public static string ToUsiMove(Vector2Int fromPos, Vector2Int toPos)
     {
-        int fromX = 9 - (fromPos.x - 1);
-        char fromYChar = (char)('a' + 9 - fromPos.y);
-        int toX = 9 - (toPos.x - 1);
-        char toYChar = (char)('a' + 9 - toPos.y);
+        int fromX = fromPos.x;
+        char fromYChar = (char)('a' + fromPos.y - 1);
+        int toX = toPos.x;
+        char toYChar = (char)('a' + toPos.y - 1);
         
-        string notation = $"{fromX}{fromYChar}{toX}{toYChar}";
-        
-        return notation;
+        return $"{fromX}{fromYChar}{toX}{toYChar}";
     }
     
     /// <summary>
@@ -85,11 +82,95 @@ public static class UsiConverter
     /// </summary>
     public static string ToUsiDrop(PieceType pieceType, Vector2Int toPos)
     {
-        int toX = 9 - (toPos.x - 1);
-        char toYChar = (char)('a' + 9 - toPos.y);
+        int toX = toPos.x;
+        char toYChar = (char)('a' + toPos.y - 1);
         string pieceChar = PieceTypeToChar(pieceType);
-        string notation = $"{pieceChar}*{toX}{toYChar}";
-        return notation;
+        
+        return $"{pieceChar}*{toX}{toYChar}";
+    }
+
+    /// <summary>
+    /// 盤面の状態をSFEN形式に変換
+    /// </summary>
+    public static string ConvertBoardToSfen(PieceType[,] board)
+    {
+        string sfen = "";
+        // 盤面の状態をSFEN形式に変換
+        for (int y = 1; y <= 9; y++)
+        {
+            if (y > 1) sfen += "/";
+            for (int x = 9; x >= 1; x--)
+            {
+                PieceType pieceType = board[x - 1, y - 1];
+                if (pieceType == PieceType.None)
+                {
+                    char delimiterChar = '/'; // 区切り文字
+                    if (sfen[^1] == delimiterChar || !int.TryParse(sfen[^1].ToString(), out _))
+                    {
+                        sfen += "1"; // 連続する空白の数を増やす
+                    }
+                    else
+                    {
+                        int lastEmptyCount = int.Parse(sfen[^1].ToString());
+                        sfen = sfen.Remove(sfen.Length - 1) + (lastEmptyCount + 1);
+                    }
+                }
+                else
+                {
+                    Piece piece = ShogiManager.Instance.GetPieceAt(new Vector2Int(x, y));
+                    if (piece.isPromoted)
+                    {
+                        sfen += "+";
+                        pieceType = piece.BasePieceType;
+                    }
+                    
+                    string pieceChar = PieceTypeToChar(pieceType);
+                    if (piece.PieceTurn == Turn.後手)
+                    {
+                        pieceChar = pieceChar.ToLower();
+                    }
+                    sfen += pieceChar;
+                }
+            }
+        }
+        return sfen;
+    }
+    
+    /// <summary>
+    /// 持ち駒の状態をSFEN形式に変換
+    /// </summary>
+    public static string ConvertCapturesToSfen(int[] senteCapturedPieces, int[] goteCapturedPieces)
+    {
+        string sfen = "";
+        // 先手の持ち駒
+        for (int i = 0; i < senteCapturedPieces.Length; i++)
+        {
+            int count = senteCapturedPieces[i];
+            if (count > 0)
+            {
+                string pieceChar = PieceTypeToChar((PieceType)i);
+                if (senteCapturedPieces[i] > 1)
+                {
+                    sfen += senteCapturedPieces[i];
+                }
+                sfen += pieceChar;
+            }
+        }
+        // 後手の持ち駒
+        for (int i = 0; i < goteCapturedPieces.Length; i++)
+        {
+            int count = goteCapturedPieces[i];
+            if (count > 0)
+            {
+                string pieceChar = PieceTypeToChar((PieceType)i);
+                if (goteCapturedPieces[i] > 1)
+                {
+                    sfen += goteCapturedPieces[i];
+                }
+                sfen += pieceChar.ToLower();
+            }
+        }
+        return sfen == "" ? "-" : sfen;
     }
 
     /// <summary>
@@ -104,9 +185,9 @@ public static class UsiConverter
             'N' => PieceType.桂馬, // 桂馬
             'S' => PieceType.銀将, // 銀将
             'G' => PieceType.金将, // 金将
-            'K' => PieceType.玉将, // 玉将
-            'R' => PieceType.飛車, // 飛車
             'B' => PieceType.角行, // 角行
+            'R' => PieceType.飛車, // 飛車
+            'K' => PieceType.玉将, // 玉将
             _ => throw new ArgumentException("不明な持ち駒: " + pieceChar)
         };
         return pieceType;
@@ -124,9 +205,9 @@ public static class UsiConverter
             PieceType.桂馬 => "N", // 桂馬
             PieceType.銀将 => "S", // 銀将
             PieceType.金将 => "G", // 金将
-            PieceType.玉将 => "K", // 玉将
-            PieceType.飛車 => "R", // 飛車
             PieceType.角行 => "B", // 角行
+            PieceType.飛車 => "R", // 飛車
+            PieceType.玉将 => "K", // 玉将
             _ => throw new ArgumentException("不明な持ち駒: " + pieceType)
         };
         return pieceChar;
