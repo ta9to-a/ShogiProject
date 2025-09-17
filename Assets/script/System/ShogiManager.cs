@@ -62,18 +62,21 @@ public class ShogiManager : MonoBehaviour
         InitializeBoard();
 
         // 駒の初期配置
-        switch (GameModeManager.Instance.CurrentGameMode)
+        GameModeManager.GameMode mode = GameModeManager.Instance.CurrentGameMode;
+        switch (mode)
         {
             case GameModeManager.GameMode.PlayerVsPlayer:
                 boardInit.DefaultPosition();
                 break;
             case GameModeManager.GameMode.PlayerVsAI:
-            case GameModeManager.GameMode.詰将棋:
-                GameModeManager.GameMode mode = GameModeManager.Instance.CurrentGameMode;
                 await usiEngine.StartEngin();
                 boardInit.DefaultPosition();
                 InitialBoard(mode);
-                
+                break;
+            case GameModeManager.GameMode.詰将棋:
+                await usiEngine.StartEngin();
+                boardInit.CustomPosition();
+                InitialBoard(mode);
                 break;
         }
         
@@ -140,6 +143,10 @@ public class ShogiManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// USIエンジンに初期局面を設定
+    /// </summary>
+    /// <param name="gameMode"></param>
     private void InitialBoard(GameModeManager.GameMode gameMode)
     {
         string startMassage; // usiの初期局面設定用の文字列
@@ -150,7 +157,9 @@ public class ShogiManager : MonoBehaviour
                 break;
             case GameModeManager.GameMode.詰将棋:
                 // 持ち駒の状態を辞書型に変換
-                startMassage = StartMassage();
+                startMassage =
+                    $"sfen {UsiConverter.ConvertBoardToSfen(_boardState)}" +
+                    $" b {UsiConverter.ConvertCapturesToSfen(SenteCapturedPieceType, GoteCapturedPieceType)} 1";
                 break;
             default:
                 Debug.LogError("usiの使用を想定されていません");
@@ -160,20 +169,6 @@ public class ShogiManager : MonoBehaviour
         if (usiEngine == null) return;
 
         usiEngine.SetStartPosition(startMassage);
-    }
-
-    private string StartMassage()
-    {
-        return $"sfen {UsiConverter.ConvertBoardToSfen(_boardState)}" +
-            $" b {UsiConverter.ConvertCapturesToSfen(SenteCapturedPieceType, GoteCapturedPieceType)} 1";
-    }
-
-    private void Update()
-    {
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            Debug.Log(StartMassage());
-        }
     }
 
     /// <summary>
@@ -192,7 +187,8 @@ public class ShogiManager : MonoBehaviour
         
         // 手番交代と選択の解除
         ActivePlayer = (ActivePlayer == Turn.先手) ? Turn.後手 : Turn.先手;
-        
+
+        Debug.Log(IsCheckmate(ActivePlayer));
         // 詰み状態ではないかのチェック
         if (IsCheckmate(ActivePlayer))
         {
@@ -204,7 +200,7 @@ public class ShogiManager : MonoBehaviour
                 GameModeManager.GameMode.PlayerVsPlayer) usiEngine.StopEngine();
             return;
         }
-
+        
         CancelSelection();
         moveHighlight.SetLastMoveHighlight(toPos);
         
@@ -275,6 +271,8 @@ public class ShogiManager : MonoBehaviour
     {
         // 全ての駒の移動可能範囲を更新
         UpdateMovePosFresh();
+        
+        if (!_kingObj.TryGetValue(defenderTurn, out Piece king)) return false;
         
         // 王手駒の取得
         List<Piece> attackers = CollectAttackers(defenderTurn);
@@ -355,6 +353,7 @@ public class ShogiManager : MonoBehaviour
     private List<Piece> CollectAttackers(Turn defender)
     {
         List<Piece> outePieces = new List<Piece>();
+        
         Piece king = _kingObj[defender];
         Turn attackerSide = (defender == Turn.先手) ? Turn.後手 : Turn.先手;
 

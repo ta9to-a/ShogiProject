@@ -98,14 +98,14 @@ public static class UsiConverter
         // 盤面の状態をSFEN形式に変換
         for (int y = 1; y <= 9; y++)
         {
-            if (y > 1) sfen += "/";
+            char delimiterChar = '/'; // 区切り文字
+            if (y > 1) sfen += delimiterChar;
             for (int x = 9; x >= 1; x--)
             {
                 PieceType pieceType = board[x - 1, y - 1];
                 if (pieceType == PieceType.None)
                 {
-                    char delimiterChar = '/'; // 区切り文字
-                    if (sfen[^1] == delimiterChar || !int.TryParse(sfen[^1].ToString(), out _))
+                    if (sfen.Length == 0 || sfen[^1] == delimiterChar || !char.IsDigit(sfen[^1]))
                     {
                         sfen += "1"; // 連続する空白の数を増やす
                     }

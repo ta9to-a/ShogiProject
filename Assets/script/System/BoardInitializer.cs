@@ -39,6 +39,18 @@ public class BoardInitializer : MonoBehaviour
         CreateMirroredPieces(PieceType.飛車, new Vector2Int(2, 8), new Vector2Int(8, 2), false);
         CreateLinePieces(PieceType.玉将, new[] { 5 }, 9, 1, false);
     }
+    
+    public void CustomPosition()
+    {
+        CreatePiece(PieceType.飛車, new Vector2Int(5, 1), Turn.先手, true);
+        CreatePiece(PieceType.香車, new Vector2Int(1, 1), Turn.後手, false);
+        CreatePiece(PieceType.玉将, new Vector2Int(2, 2), Turn.後手, false);
+        CreatePiece(PieceType.銀将, new Vector2Int(3, 3), Turn.後手, false);
+        CreatePiece(PieceType.角行, new Vector2Int(2, 3), Turn.先手, false);
+        CreatePiece(PieceType.歩兵, new Vector2Int(1, 3), Turn.後手, false);
+        CreatePiece(PieceType.角行, new Vector2Int(3, 4), Turn.後手, false);
+        CreatePiece(PieceType.香車, new Vector2Int(2, 5), Turn.先手, false);
+    }
 
     public void CreateCapturePieces()
     {
