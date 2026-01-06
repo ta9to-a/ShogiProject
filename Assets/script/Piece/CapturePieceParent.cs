@@ -80,7 +80,7 @@ public class CapturePieceParent : MonoBehaviour
     /// </summary>
     public async void DropPiece()
     {
-        ShogiManager.Instance.moveHighlight.SetCanMovePosHighlight(checkMovablePositions);
+        // ShogiManager.Instance.moveHighlight.SetCanMovePosHighlight(checkMovablePositions);
         
         Vector2Int clickedPoint = await WaitForMouseClick();
         

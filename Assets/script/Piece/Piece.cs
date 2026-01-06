@@ -1,9 +1,6 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using Cysharp.Threading.Tasks;
-using Unity.VisualScripting;
 
 public class Piece : MonoBehaviour
 {
@@ -20,15 +17,7 @@ public class Piece : MonoBehaviour
     
     private Sprite _unpromSprite;
     private Sprite _promSprite;
-
-    /// <summary>
-    /// 駒の情報を保存・更新する
-    /// </summary>
-    /// <param name="pieceType">駒の種類</param>
-    /// <param name="position">駒の場所</param>
-    /// <param name="isPromote">成るか否か</param>
-    /// <param name="unpromSprite">成る前のスプライト</param>
-    /// <param name="promoSprite">成り時のスプライト</param>
+    
     public void ApplyStatePiece
         (PieceType pieceType, Vector2Int position, bool isPromote, Sprite unpromSprite, Sprite promoSprite)
     {
@@ -63,28 +52,19 @@ public class Piece : MonoBehaviour
         // 駒の初期位置を設定
         SetPosition(position);
     }
-
-    /// <summary>
-    /// 駒のポジションの設定
-    /// </summary>
+    
     public void SetPosition(Vector2Int pos)
     {
         currentPos = pos;
         transform.position = new Vector2(currentPos.x, currentPos.y);
     }
     
-    /// <summary>
-    /// 駒を成る処理
-    /// </summary>
     public void PromotePiece()
     {
         isPromoted = true;
         GetComponent<SpriteRenderer>().sprite = _promSprite;
     }
-
-    /// <summary>
-    /// 駒の選択処理
-    /// </summary>
+    
     public void SelectPiece()
     {
         // プレイヤーのターン確認
@@ -109,7 +89,7 @@ public class Piece : MonoBehaviour
     private async void MovePiece()
     {
         // 移動可能なマス目をハイライト表示
-        ShogiManager.Instance.moveHighlight.SetCanMovePosHighlight(MovablePositions);
+        // ShogiManager.Instance.moveHighlight.SetCanMovePosHighlight(MovablePositions);
         
         // クリックされるまで待つ
         Vector2Int clickedPoint = await WaitForMouseClick();

@@ -1,46 +1,43 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
 using Cysharp.Threading.Tasks;
 
 public class ShogiManager : MonoBehaviour
 {
-    // シングルトン管理
     public static ShogiManager Instance { get; private set; }
     
-    public Turn ActivePlayer { get; private set; }                  // 現在の手番（先手 or 後手）
-    private PieceType[,] _boardState = new PieceType[9, 9];         // 盤面の状態を管理
-    private Dictionary<Vector2Int, Piece> _pieceObjects = new ();   // 盤面上の駒オブジェクト
-    public Dictionary<Turn, List<CapturePieceParent>> CapturePieceObjects = new ();         // 持ち駒のオブジェクト
+    // 盤面の状態管理
+    public Turn ActivePlayer { get; private set; }
+    private PieceType[,] _boardState = new PieceType[9, 9];
+    public int[] SenteCapturedPieceType { get; } = new int[7];
+    public int[] GoteCapturedPieceType { get; } = new int[7];
+    public bool[] SenteFuPosition { get;　} = new bool[9];
+    public bool[] GoteFuPosition { get; } = new bool[9];
+    
+    // オブジェクト管理
+    private Dictionary<Turn, Piece> _kingObj = new();
+    private Dictionary<Vector2Int, Piece> _pieceObjects = new ();
+    public Dictionary<Turn, List<CapturePieceParent>> CapturePieceObjects = new ();
+    private Dictionary<Turn, Dictionary<Vector2Int, List<Piece>>> _allMovesCache = new();
+
+    public PieceDatabase pieceDatabase;
+    public PromotionDatabase promotionDatabase;
+    
+    public int RecMoveCount { get; private set; } // 手数のカウント
     
     public GameObject curSelPiece;  // 現在選択されている駒
     public bool CanPieceSelect { get; private set; }
     
-    // 持ち駒の状態を管理
-    public int[] SenteCapturedPieceType { get; } = new int[7];   // 先手の持ち駒の種類ごとの数
-    public int[] GoteCapturedPieceType { get; } = new int[7];    // 後手の持ち駒の種類ごとの数
-
-    // 二歩チェック用の歩の列情報
-    public bool[] SenteFuPosition { get;　} = new bool[9]; // 先手の歩の列状態
-    public bool[] GoteFuPosition { get; } = new bool[9];  // 後手の歩の列状態
-    
-    public int RecMoveCount { get; private set; } // 手数のカウント
-
-    private Dictionary<Turn, Piece> _kingObj = new();   // 玉のオブジェクトを管理
-    private Dictionary<Turn, Dictionary<Vector2Int, List<Piece>>> _allMovesCache = new(); // 全ての駒の移動可能範囲
-    
     private UsiMoveData _data;
     
     [Header("持ち駒の管理")]
-    [SerializeField] private BoardInitializer boardInit;    // 持ち駒
+    private PiecePlacement _piecePlacement;
     [SerializeField] public MoveHighlight moveHighlight;    // 駒の移動可能範囲ハイライト
-    [SerializeField] private UsiEngineConnector usiEngine;  // USIエンジン接続
     
-    [Header("駒のデータベース")]
-    [SerializeField] public PieceDatabase pieceDatabase;
-    [SerializeField] public PromotionDatabase promotionDatabase;
+    private ShogiEngine _shogiEngine;
+    private Turn _aiTurn = Turn.後手;
 
     private void Awake()
     {
@@ -51,50 +48,45 @@ public class ShogiManager : MonoBehaviour
         }
         Instance = this;
         CanPieceSelect = false;
+        
+        pieceDatabase = Resources.Load<PieceDatabase>("Databases/PieceDatabase");
+        promotionDatabase = Resources.Load<PromotionDatabase>("Databases/PromotionDatabase");
     }
-    
-    /// <summary>
-    /// ゲームの開始
-    /// </summary>
-    public async void SetGame()
-    {
-        // 盤面の初期化
-        InitializeBoard();
 
-        // 駒の初期配置
-        GameModeManager.GameMode mode = GameModeManager.Instance.CurrentGameMode;
-        switch (mode)
+    public void PrepareMatch(CoreSystem.GameMode gameMode)
+    {
+        InitializeBoard();
+        
+        _piecePlacement = GameObject.Find("Display").GetComponent<PiecePlacement>();
+        switch (gameMode)
         {
-            case GameModeManager.GameMode.PlayerVsPlayer:
-                boardInit.DefaultPosition();
+            case CoreSystem.GameMode.PlayerVsPlayer:
+                _piecePlacement.DefaultPosition();
                 break;
-            case GameModeManager.GameMode.PlayerVsAI:
-                await usiEngine.StartEngin();
-                boardInit.DefaultPosition();
-                InitialBoard(mode);
+            case CoreSystem.GameMode.PlayerVsAI:
+                _piecePlacement.DefaultPosition();
+                InitialBoard(gameMode);
                 break;
-            case GameModeManager.GameMode.詰将棋:
-                await usiEngine.StartEngin();
-                boardInit.CustomPosition();
-                InitialBoard(mode);
+            case CoreSystem.GameMode.詰将棋:
+                _piecePlacement.CustomPosition();
+                InitialBoard(gameMode);
                 break;
         }
         
         // 玉の登録
         KingRegister();
         // 歩の列情報を更新
-        CheckTwoFu();
+        RefreshFuPos();
         // 全ての駒の移動可能範囲を更新
         UpdateMovePosFresh();
+        // 初期局面の設定
+        _piecePlacement.CreateCapturePieces();
         // 持ち駒UIの初期化
         CapturePieceUIManager.Instance.Initialize();
         
         CanPieceSelect = true;
     }
     
-    /// <summary>
-    /// 盤面の初期化
-    /// </summary>
     private void InitializeBoard()
     {
         ActivePlayer = Turn.先手;
@@ -114,7 +106,7 @@ public class ShogiManager : MonoBehaviour
         Array.Clear(GoteFuPosition, 0, GoteFuPosition.Length);
         
         curSelPiece = null;
-        moveHighlight.RemoveHighlight();
+        //moveHighlight.RemoveHighlight();
         
         _kingObj.Clear();
         
@@ -123,57 +115,49 @@ public class ShogiManager : MonoBehaviour
         
         CapturePieceObjects[Turn.先手] = new List<CapturePieceParent>();
         CapturePieceObjects[Turn.後手] = new List<CapturePieceParent>();
-        
-        boardInit.CreateCapturePieces();
     }
     
-    /// <summary>
-    /// 玉のオブジェクトを登録
-    /// </summary>
+    
     private void KingRegister()
     {
         _kingObj.Clear();
         foreach (var kvp in _pieceObjects)
         {
             Piece kingPiece = kvp.Value;
-            if (kingPiece.BasePieceType == PieceType.玉将)
-            {
-                _kingObj[kingPiece.PieceTurn] = kingPiece;
-            }
+            if (kingPiece.BasePieceType == PieceType.玉将) _kingObj[kingPiece.PieceTurn] = kingPiece;
         }
     }
-
-    /// <summary>
-    /// USIエンジンに初期局面を設定
-    /// </summary>
-    /// <param name="gameMode"></param>
-    private void InitialBoard(GameModeManager.GameMode gameMode)
+    
+    private async void InitialBoard(CoreSystem.GameMode gameMode)
     {
-        string startMassage; // usiの初期局面設定用の文字列
-        switch (gameMode)
+        try
         {
-            case GameModeManager.GameMode.PlayerVsAI:
-                startMassage = "startpos";
-                break;
-            case GameModeManager.GameMode.詰将棋:
-                // 持ち駒の状態を辞書型に変換
-                startMassage =
-                    $"sfen {UsiConverter.ConvertBoardToSfen(_boardState)}" +
-                    $" b {UsiConverter.ConvertCapturesToSfen(SenteCapturedPieceType, GoteCapturedPieceType)} 1";
-                break;
-            default:
-                Debug.LogError("usiの使用を想定されていません");
-                return;
+            _shogiEngine = new ShogiEngine();
+            await _shogiEngine.Start();
+            
+            string startMassage;
+            switch (gameMode)
+            {
+                case CoreSystem.GameMode.PlayerVsAI:
+                    startMassage = "startpos";
+                    break;
+                case CoreSystem.GameMode.詰将棋:
+                    startMassage =
+                        $"sfen {UsiConverter.ConvertBoardToSfen(_boardState)}" +
+                        $" b {UsiConverter.ConvertCapturesToSfen(SenteCapturedPieceType, GoteCapturedPieceType)} 1";
+                    break;
+                default:
+                    Debug.LogError("usiの使用を想定されていません");
+                    return;
+            }
+            _shogiEngine.SetStartPosition(startMassage);
         }
-
-        if (usiEngine == null) return;
-
-        usiEngine.SetStartPosition(startMassage);
+        catch (Exception e)
+        {
+            Debug.LogError("ShogiEngineの起動に失敗しました: " + e.Message);
+        }
     }
-
-    /// <summary>
-    /// 局面の移動フェーズを終了し、次の手番に移行
-    /// </summary>
+    
     public void EndTurnPhase(Vector2Int toPos)
     {
         DebugLastTurn(toPos);
@@ -183,31 +167,19 @@ public class ShogiManager : MonoBehaviour
         RecMoveCount++;
         
         // 二歩の更新
-        CheckTwoFu();
+        RefreshFuPos();
         
         // 手番交代と選択の解除
         ActivePlayer = (ActivePlayer == Turn.先手) ? Turn.後手 : Turn.先手;
-
-        Debug.Log(IsCheckmate(ActivePlayer));
-        // 詰み状態ではないかのチェック
-        if (IsCheckmate(ActivePlayer))
+        if (!IsCheckmate(ActivePlayer))
         {
-            Debug.Log("詰み");
-            moveHighlight.RemoveCanMovePosHighlight();
-            CanPieceSelect = false;
+            CancelSelection();
+            //moveHighlight.SetLastMoveHighlight(toPos);
+        
+            // AIのターンの場合、エンジンに指し手を要求
+            if (_shogiEngine == null) return;
             
-            if (GameModeManager.Instance.CurrentGameMode !=
-                GameModeManager.GameMode.PlayerVsPlayer) usiEngine.StopEngine();
-            return;
-        }
-        
-        CancelSelection();
-        moveHighlight.SetLastMoveHighlight(toPos);
-        
-        // AIのターンの場合、エンジンに指し手を要求
-        if (GameModeManager.Instance.CurrentGameMode != GameModeManager.GameMode.PlayerVsPlayer)
-        {
-            if (ActivePlayer == Turn.後手)
+            if (ActivePlayer == _aiTurn)
             {
                 CanPieceSelect = false;
                 SendMoveToEngine();
@@ -216,6 +188,14 @@ public class ShogiManager : MonoBehaviour
             {
                 CanPieceSelect = true;
             }
+        }
+        else
+        {
+            Debug.Log("詰み");
+            moveHighlight.RemoveCanMovePosHighlight();
+            CanPieceSelect = false;
+
+            _shogiEngine?.Stop();
         }
     }
     
@@ -227,7 +207,7 @@ public class ShogiManager : MonoBehaviour
         await UniTask.Yield();
         
         curSelPiece = null;
-        moveHighlight.RemoveHighlight();
+        // moveHighlight.RemoveHighlight();
     }
 
     /// <summary>
@@ -237,11 +217,8 @@ public class ShogiManager : MonoBehaviour
     {
         
     }
-
-    /// <summary>
-    /// 歩の座標検知をし二歩のチェック
-    /// </summary>
-    private void CheckTwoFu()
+    
+    private void RefreshFuPos()
     {
         for (int x = 0; x < 9; x++)
         {
@@ -263,29 +240,22 @@ public class ShogiManager : MonoBehaviour
         }
     }
     
-    /// <summary>
-    /// 詰みの状態をチェック
-    /// </summary>
-    /// <returns>詰みならtrue</returns>
     private bool IsCheckmate(Turn defenderTurn)
     {
         // 全ての駒の移動可能範囲を更新
         UpdateMovePosFresh();
         
-        if (!_kingObj.TryGetValue(defenderTurn, out Piece king)) return false;
+        // 玉が存在しない場合
+        if (!_kingObj.TryGetValue(defenderTurn, out Piece _)) return false;
         
-        // 王手駒の取得
+        // 王手を掛けている駒の取得
         List<Piece> attackers = CollectAttackers(defenderTurn);
-        if (attackers.Count == 0) return false; // 王手されていない場合
+        
+        // 王手されていない場合
+        if (attackers.Count == 0) return false;
         
         // 多重王手の場合
-        if (attackers.Count > 1)
-        {
-            // 玉が逃げられるかチェック
-            if (CanKingEscape(defenderTurn)) return false;
-            
-            return true;
-        }
+        if (attackers.Count > 1) return !CanKingEscape(defenderTurn);
         
         Piece attacker = attackers[0];
         // 玉が逃げられるか
@@ -322,13 +292,10 @@ public class ShogiManager : MonoBehaviour
             }
         }
 
-        GetAllMoves();
+        RefreshAllPieceRange();
     }
     
-    /// <summary>
-    /// 全ての駒の移動可能範囲を取得
-    /// </summary>
-    private void GetAllMoves()
+    private void RefreshAllPieceRange()
     {
         foreach (var kvp in _pieceObjects)
         {
@@ -345,11 +312,7 @@ public class ShogiManager : MonoBehaviour
             }
         }
     }
-
-    /// <summary>
-    /// 王手されているかチェック
-    /// </summary>
-    /// <returns>王手している駒</returns>
+    
     private List<Piece> CollectAttackers(Turn defender)
     {
         List<Piece> outePieces = new List<Piece>();
@@ -358,15 +321,13 @@ public class ShogiManager : MonoBehaviour
         Turn attackerSide = (defender == Turn.先手) ? Turn.後手 : Turn.先手;
 
         if (_allMovesCache[attackerSide].TryGetValue(king.currentPos, out List<Piece> attackers))
+        {
             outePieces.AddRange(attackers);
-        
+        }
+
         return outePieces;
     }
     
-    /// <summary>
-    /// 玉が逃げられるかチェック
-    /// </summary>
-    /// <param name="defender">王手されている玉のターン</param>
     private bool CanKingEscape(Turn defender)
     {
         Piece kingPiece = _kingObj[defender];
@@ -383,10 +344,7 @@ public class ShogiManager : MonoBehaviour
         
         return false; // 逃げられない場合
     }
-
-    /// <summary>
-    /// 王手駒を取る手段があるか
-    /// </summary>
+    
     private bool CanCaptureAttacker(Turn defender, Piece attacker)
     {
         if (_allMovesCache[defender].TryGetValue(attacker.currentPos, out List<Piece> candidates))
@@ -401,9 +359,6 @@ public class ShogiManager : MonoBehaviour
         return false; // 駒を取る手段がない場合
     }
     
-    /// <summary>
-    /// 直線移動する駒の王手を遮断できるかチェック
-    /// </summary>
     private bool CanAvoidCheck(Turn defender, Piece attacker)
     {
         Piece king = _kingObj[defender];
@@ -700,7 +655,7 @@ public class ShogiManager : MonoBehaviour
             GoteCapturedPieceType;
         
         // 持ち駒の数を指す
-        boardInit.CreatePiece(pieceType, pos, ActivePlayer, false);
+        _piecePlacement.CreatePiece(pieceType, pos, ActivePlayer, false);
         capturedPieceType[(int)pieceType]--;
         
         // 持ち駒のUIを更新
@@ -734,22 +689,9 @@ public class ShogiManager : MonoBehaviour
         _pieceObjects.Remove(pos);
     }
     
-    /// <summary>
-    /// 指定した位置にある駒を取得する
-    /// </summary>
-    public Piece GetPieceAt(Vector2Int pos)
-    {
-        return _pieceObjects.ContainsKey(pos) ? _pieceObjects[pos] : null;
-    }
-
-    /// <summary>
-    /// 指定した位置にある駒の種類を取得する
-    /// </summary>
-    public PieceType GetPieceTypeAt(Vector2Int pos)
-    {
-        return _boardState[pos.x - 1, pos.y - 1];
-    }
-
+    public Piece GetPieceAt(Vector2Int pos) => _pieceObjects.GetValueOrDefault(pos);
+    public PieceType GetPieceTypeAt(Vector2Int pos) => _boardState[pos.x - 1, pos.y - 1];
+    
     private struct UsiMoveData
     {
         public Vector2Int From;
@@ -774,10 +716,10 @@ public class ShogiManager : MonoBehaviour
         {
             usiMove = UsiConverter.ToUsiDrop(_data.Type.Value, _data.To);
         }
-        usiEngine.AddMoveToHistory(usiMove);
+        _shogiEngine.AddMoveToHistory(usiMove);
         
         // エンジンに盤面の状態を送信し、次の指し手を要求
-        usiEngine.RequestBestMoveWithHistory();
+        _shogiEngine.RequestBestMoveWithHistory();
     }
 
     /// <summary>
@@ -847,7 +789,7 @@ public class ShogiManager : MonoBehaviour
         }
         
         // 指し手を履歴に追加
-        usiEngine.AddMoveToHistory(moveString);
+        _shogiEngine.AddMoveToHistory(moveString);
         EndTurnPhase(toPos);
         
         _data = default;
@@ -889,7 +831,7 @@ public class ShogiManager : MonoBehaviour
             ? $"{activeTurn}同{kanjiPiece}"
             : $"{activeTurn}{rank}{kanjiFile}{kanjiPiece}";
         
-        Debug.Log(debug);
+        //Debug.Log(debug);
         _debugLastMovePos = toPos;
     }
     

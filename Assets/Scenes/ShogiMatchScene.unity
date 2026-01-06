@@ -134,7 +134,7 @@ GameObject:
   - component: {fileID: 128281046}
   - component: {fileID: 128281047}
   m_Layer: 0
-  m_Name: MoveHighlight
+  m_Name: Range
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -153,7 +153,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 581703294}
+  m_Father: {fileID: 142689493}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &128281046
 MonoBehaviour:
@@ -234,7 +234,7 @@ GameObject:
   - component: {fileID: 142689493}
   - component: {fileID: 142689494}
   m_Layer: 0
-  m_Name: ShogiDisplay
+  m_Name: Display
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -253,10 +253,12 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 581703294}
   - {fileID: 978167141}
   - {fileID: 782762466}
   - {fileID: 1881146119}
-  - {fileID: 581703294}
+  - {fileID: 128281045}
+  - {fileID: 1133498830}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &142689494
@@ -349,7 +351,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &323693158
+--- !u!1 &364851122
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -357,46 +359,28 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 323693160}
-  - component: {fileID: 323693159}
+  - component: {fileID: 364851123}
   m_Layer: 0
-  m_Name: USIEngineConnector
+  m_Name: Board
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &323693159
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 323693158}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 84e9d9a1726124dbda6f6ae6e7603307, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  isPonder: 1
-  useBook: 1
-  aiThinkTimeMs: 0
-  depthLimit: 0
-  nodesLimit: 0
---- !u!4 &323693160
+--- !u!4 &364851123
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 323693158}
+  m_GameObject: {fileID: 364851122}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
+  m_Father: {fileID: 581703294}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &383534235
 GameObject:
@@ -616,7 +600,7 @@ GameObject:
   - component: {fileID: 558494463}
   - component: {fileID: 558494462}
   m_Layer: 5
-  m_Name: false
+  m_Name: Unpromote Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -734,7 +718,7 @@ GameObject:
   - component: {fileID: 581703294}
   - component: {fileID: 581703295}
   m_Layer: 0
-  m_Name: ShogiBoard
+  m_Name: Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -753,8 +737,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 128281045}
-  - {fileID: 1133498830}
+  - {fileID: 364851123}
   m_Father: {fileID: 142689493}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &581703295
@@ -853,7 +836,7 @@ GameObject:
   - component: {fileID: 782762464}
   - component: {fileID: 782762463}
   m_Layer: 5
-  m_Name: PromotionCanvas
+  m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -956,7 +939,7 @@ GameObject:
   - component: {fileID: 818408946}
   - component: {fileID: 818408945}
   m_Layer: 5
-  m_Name: true
+  m_Name: Promote Button
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1152,12 +1135,12 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1133498829}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 1, y: 1, z: 0}
   m_LocalScale: {x: 1.58, y: 1.58, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 581703294}
+  m_Father: {fileID: 142689493}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!212 &1133498831
 SpriteRenderer:
@@ -1430,7 +1413,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2035514904}
-  - component: {fileID: 2035514908}
   - component: {fileID: 2035514909}
   m_Layer: 0
   m_Name: System Manager
@@ -1454,24 +1436,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2035514908
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2035514902}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62379250ab32e4de9ab5ec3b20a0416e, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  curSelPiece: {fileID: 0}
-  boardInit: {fileID: 142689494}
-  moveHighlight: {fileID: 128281046}
-  usiEngine: {fileID: 323693159}
-  pieceDatabase: {fileID: 11400000, guid: 3e1aa3e3e9ca64414906e8f9c17b3ff6, type: 2}
-  promotionDatabase: {fileID: 11400000, guid: d655c5a1b11bc4452aba95807e72800f, type: 2}
 --- !u!114 &2035514909
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1484,6 +1448,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3085cf290cb1e4191b85b7143579e962, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  selectGameMode: 1
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -1493,4 +1458,3 @@ SceneRoots:
   - {fileID: 2035514904}
   - {fileID: 142689493}
   - {fileID: 1511093935}
-  - {fileID: 323693160}

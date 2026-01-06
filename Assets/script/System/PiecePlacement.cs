@@ -1,11 +1,7 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using UnityEngine;
-using UnityEngine.Rendering;
 
-public class BoardInitializer : MonoBehaviour
+public class PiecePlacement : MonoBehaviour
 {
     [Header("プレファブ")]
     [SerializeField] private GameObject piecePrefab;
@@ -137,21 +133,19 @@ public class BoardInitializer : MonoBehaviour
     public void CreateCapturePieces(Turn turn)
     {
         Vector2 basePos = (turn == Turn.先手) ? senteBasePosition : goteBasePosition;
-        List<PieceType?[]> pieceLayout = new List<PieceType?[]>
+        List<PieceType[]> pieceLayout = new List<PieceType[]>
         {
-            new PieceType?[] { PieceType.香車, PieceType.桂馬 },
-            new PieceType?[] { PieceType.銀将, PieceType.金将 },
-            new PieceType?[] { PieceType.角行, PieceType.飛車 },
-            new PieceType?[] { PieceType.歩兵, null }
+            new [] { PieceType.香車, PieceType.桂馬 },
+            new [] { PieceType.銀将, PieceType.金将 },
+            new [] { PieceType.角行, PieceType.飛車 },
+            new [] { PieceType.歩兵 }
         };
         for (int row = 0; row < pieceLayout.Count; row++)
         {
             for (int col = 0; col < pieceLayout[row].Length; col++)
             {
-                PieceType? type = pieceLayout[row][col];
-                if (!type.HasValue) continue;
-                
-                PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(type.Value);
+                PieceType type = pieceLayout[row][col];
+                PieceData data = ShogiManager.Instance.pieceDatabase.GetPieceData(type);
                 Vector2 pos = new Vector2(
                     basePos.x + col * capturePieceWidth * (turn == Turn.先手 ? -1f : 1f),
                     basePos.y + row * capturePieceHeight * (turn == Turn.先手 ? 1f : -1f)

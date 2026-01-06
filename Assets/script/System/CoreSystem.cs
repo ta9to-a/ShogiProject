@@ -1,18 +1,16 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
-public class GameModeManager : MonoBehaviour
+public class CoreSystem : MonoBehaviour
 {
-    public static GameModeManager Instance { get; private set; }
+    public static CoreSystem Instance { get; private set; }
 
+    public GameMode selectGameMode = GameMode.PlayerVsPlayer;
     public enum GameMode
     {
         PlayerVsPlayer,
         PlayerVsAI,
         詰将棋
     }
-    public GameMode CurrentGameMode { get; private set; } = GameMode.詰将棋;
     
     private void Awake()
     {
@@ -27,13 +25,14 @@ public class GameModeManager : MonoBehaviour
 
     private void Start()
     {
-        SetMode(CurrentGameMode);
+        SetMode(selectGameMode);
     }
 
     public void SetMode(GameMode gameMode)
     {
-        CurrentGameMode = gameMode;
-        Debug.Log("Game Mode : " + CurrentGameMode);
-        ShogiManager.Instance.SetGame();
+        Debug.Log("Game Mode : " + gameMode);
+        
+        var shogiManager = gameObject.AddComponent<ShogiManager>();
+        shogiManager.PrepareMatch(gameMode);
     }
 }
